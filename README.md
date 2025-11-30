@@ -1,102 +1,126 @@
-# MNIST Digit Recognition with Softmax Regression
+# MODELS - Thư mục chứa các model và dữ liệu
 
-A web-based digit recognition system using three different feature extraction methods with Softmax Regression.
-
-## Project Structure
+## Cấu trúc thư mục
 
 ```
-├── BE/              # Backend Flask API
-├── FE/              # Frontend web interface
-├── MODELS/          # Machine learning models
-│   ├── data/        # MNIST dataset
-│   ├── models/      # Model implementations
-│   └── trained/     # Saved trained models
-└── requirements.txt # Python dependencies
+MODELS/
+├── data/                 # Thư mục chứa dataset MNIST
+├── models/              
+│   ├── src/             # Mã nguồn các model
+│   └── utils/           # Các hàm tiện ích
+└── trained/             # Model đã train (sẽ tạo sau khi train)
 ```
 
-## Setup Instructions
+## Mô tả các thư mục
 
-### 1. Install Dependencies
+### 📁 `models/src/`
+Chứa mã nguồn các model Softmax Regression:
+- `base.py`: Class cơ sở `SoftmaxRegression` để các model khác kế thừa
+- `model_pixel.py`: Model sử dụng raw pixel intensity
+- `model_edge.py`: Model sử dụng edge detection (Sobel/Canny)
+- `model_pca.py`: Model sử dụng PCA để giảm chiều dữ liệu
 
+### 📁 `models/utils/`
+Chứa các hàm tiện ích:
+- Hàm load và preprocess MNIST dataset
+- Hàm visualization
+- Hàm đánh giá model
+
+### 📁 `data/`
+Chứa MNIST dataset sau khi tải về:
+- `train-images-idx3-ubyte.gz`: Ảnh training (60,000 ảnh)
+- `train-labels-idx1-ubyte.gz`: Label training
+- `t10k-images-idx3-ubyte.gz`: Ảnh test (10,000 ảnh)
+- `t10k-labels-idx1-ubyte.gz`: Label test
+
+### 📁 `trained/`
+Chứa các model đã train (file .pkl):
+- `pixel_model.pkl`
+- `edge_model.pkl`
+- `pca_model.pkl`
+
+## Setup và tải MNIST Dataset
+
+### Cách 1: Tải từ Kaggle (Khuyên dùng - Nhanh nhất)
+
+**Bước 1: Cài đặt Kaggle API**
 ```bash
-pip install -r requirements.txt
+pip install kaggle
 ```
 
-### 2. Train Models
+**Bước 2: Cấu hình Kaggle credentials**
+1. Truy cập https://www.kaggle.com/settings
+2. Scroll xuống "API" section → Click "Create New Token"
+3. File `kaggle.json` sẽ được tải về
+4. Đặt file vào:
+   - **Windows**: `C:\Users\<username>\.kaggle\kaggle.json`
+   - **Linux/Mac**: `~/.kaggle/kaggle.json`
 
-Navigate to the MODELS directory and train all three variants:
+**Bước 3: Chạy script tải dataset**
+```bash
+cd MODELS/
+python download.py
+```
+
+Hoặc dùng Kaggle CLI trực tiếp:
+```bash
+kaggle datasets download -d hojjatk/mnist-dataset
+unzip mnist-dataset.zip
+```
+
+### Cách 2: Tự động tải khi train
 
 ```bash
 cd MODELS
 python train.py
 ```
 
-This will:
-- Download MNIST dataset (if not present)
-- Train three Softmax Regression models with different features:
-  - **Pixel-based**: Raw normalized pixel intensities
-  - **Edge-based**: Sobel/Canny edge detection features
-  - **PCA-based**: Principal Component Analysis dimensionality reduction
-- Save trained models to `MODELS/trained/`
+Script `train.py` sẽ tự động:
+1. Tải MNIST dataset từ http://yann.lecun.com/exdb/mnist/
+2. Lưu vào thư mục `data/`
+3. Train cả 3 model variants
+4. Lưu model vào thư mục `trained/`
 
-### 3. Run Backend Server
+### Cách 3: Tải thủ công
+
+Tải 4 file từ trang web MNIST:
+```
+http://yann.lecun.com/exdb/mnist/train-images-idx3-ubyte.gz
+http://yann.lecun.com/exdb/mnist/train-labels-idx1-ubyte.gz
+http://yann.lecun.com/exdb/mnist/t10k-images-idx3-ubyte.gz
+http://yann.lecun.com/exdb/mnist/t10k-labels-idx1-ubyte.gz
+```
+
+Đặt vào thư mục `MODELS/data/`
+
+### Cách 4: Dùng Python để tải
+
+```python
+from data.mnist_loader import MNISTLoader
+
+loader = MNISTLoader(data_dir='./data')
+X_train, y_train, X_test, y_test = loader.load_data()
+
+print(f"Train: {X_train.shape}, Test: {X_test.shape}")
+# Output: Train: (60000, 28, 28), Test: (10000, 28, 28)
+```
+
+## MNIST Dataset Info
+
+- **Tên**: MNIST Handwritten Digits
+- **Kích thước**: 60,000 ảnh train + 10,000 ảnh test
+- **Định dạng**: Ảnh grayscale 28x28 pixels
+- **Số classes**: 10 (chữ số 0-9)
+- **Nguồn**: http://yann.lecun.com/exdb/mnist/
+
+## Requirements
 
 ```bash
-cd BE
-python app.py
+pip install -r requirements.txt
 ```
 
-The API will be available at `http://localhost:5000`
-
-### 4. Open Frontend
-
-Open `FE/index.html` in your web browser or serve it with:
-
-```bash
-cd FE
-python -m http.server 8080
-```
-
-Then navigate to `http://localhost:8080`
-
-## Usage
-
-1. Draw a digit (0-9) on the canvas using your mouse
-2. Click "Predict" to send the drawing to the backend
-3. View predictions from all three models with confidence scores
-
-## API Endpoints
-
-### POST `/predict`
-
-Receives base64-encoded image data and returns predictions from all three models.
-
-**Request Body:**
-```json
-{
-  "image": "data:image/png;base64,..."
-}
-```
-
-**Response:**
-```json
-{
-  "pixel_model": {
-    "prediction": 5,
-    "probabilities": [0.01, 0.02, ...],
-    "confidence": 0.95
-  },
-  "edge_model": { ... },
-  "pca_model": { ... }
-}
-```
-
-## Model Details
-
-### Feature Vector Designs
-
-1. **Pixel Model**: Uses 784-dimensional vectors (28x28 flattened) with normalized pixel intensities [0, 1]
-2. **Edge Model**: Applies Sobel/Canny edge detection before flattening to enhance boundary features
-3. **PCA Model**: Reduces dimensionality to 50 components while preserving 95% variance
-
-All models use Softmax Regression (multinomial logistic regression) implemented purely in NumPy.
+Các thư viện cần thiết:
+- numpy: Tính toán ma trận
+- opencv-python: Edge detection
+- scikit-learn: PCA
+- matplotlib: Visualization
