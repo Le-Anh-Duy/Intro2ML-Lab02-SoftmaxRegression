@@ -1,0 +1,178 @@
+import numpy as np
+from rich.progress import *
+
+class SoftmaxRegression:
+    def __init__(self, num_features: int, num_classes: int, learning_rate=0.01):
+        """
+        Initialize the Softmax Regression model.
+
+        Args:
+            num_features (int): The number of features in the input data.
+            num_classes (int): The number of target classes.
+            learning_rate (float): The step size for gradient descent optimization. Defaults to 0.01.
+        """
+        self.num_features = num_features
+        self.num_classes = num_classes
+        self.lr = learning_rate
+        self.weights: np.ndarray = None
+        self.loss_history = []
+        self.acc_history = []
+
+    def _initialize_weights(self):
+        """
+        Initialize weights to zeros.
+        
+        The shape is (num_features + 1, num_classes) to accommodate the bias term.
+        """
+        self.weights = np.zeros((self.num_features + 1, self.num_classes))
+
+    def get_X_biased(self, X: np.ndarray):
+        """
+        Add a column of ones to the input data to handle the bias term.
+
+        Args:
+            X (np.ndarray): Input feature matrix of shape (n, m).
+
+        Returns:
+            np.ndarray: Feature matrix with bias term, shape (n, m + 1).
+        """
+        ones = np.ones((X.shape[0], 1))
+        return np.concatenate((ones, X), axis=1)
+
+    def _softmax(self, z: np.ndarray) -> np.ndarray:
+        """
+        Compute the softmax function numerically stable.
+
+        Args:
+            z (np.ndarray): Linear combination of weights and input (logits).
+
+        Returns:
+            np.ndarray: Probability distribution over classes.
+        """
+        exp_z = np.exp(z - z.max(axis=1, keepdims=True))
+        return exp_z / exp_z.sum(axis=1, keepdims=True)
+
+    def _one_hot_encode(self, y: np.ndarray) -> np.ndarray:
+        """
+        Convert integer class labels to one-hot encoded vectors.
+
+        Args:
+            y (np.ndarray): Array of integer class labels.
+
+        Returns:
+            np.ndarray: One-hot encoded matrix of shape (n, num_classes).
+        """
+        one_hot = np.zeros((y.size, self.num_classes))
+        one_hot[np.arange(y.size), y] = 1
+        return one_hot
+
+    def _cross_entropy_loss(self, y_target: np.ndarray, y_pred: np.ndarray) -> float:
+        """
+        Compute the Cross-Entropy Loss.
+
+        Args:
+            y_target (np.ndarray): One-hot encoded ground truth labels.
+            y_pred (np.ndarray): Predicted probabilities from softmax.
+
+        Returns:
+            float: The average cross-entropy loss.
+        """
+        eps = 1e-9
+        m = y_target.shape[0]
+        return -np.sum(y_target * np.log(y_pred.clip(eps, 1 - eps))) / m
+    
+    def _accuracy(self, X: np.ndarray, y: np.ndarray) -> float:
+        """
+        Compute the accuracy of the model on the given data.
+
+        Args:
+            X (np.ndarray): Input feature matrix.
+            y (np.ndarray): True class labels.
+
+        Returns:
+            float: The accuracy score (between 0 and 1).
+        """
+        y_pred = self.predict(X)
+        return np.sum(y_pred == y) / y.size
+
+    def fit(self, X: np.ndarray, y: np.ndarray, verbose=True, epochs=100):
+        """
+        Train the model using Gradient Descent.
+
+        Args:
+            X (np.ndarray): Training features of shape (n, m).
+            y (np.ndarray): Training labels of shape (n,).
+            verbose (bool): Whether to display the progress bar. Defaults to True.
+            epochs (int): Number of training iterations. Defaults to 100.
+        """
+        with Progress(
+            TextColumn("[bold blue]{task.description}"),
+            BarColumn(),
+            TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+            TimeRemainingColumn(),
+            TextColumn("{task.fields[metrics]}"),
+            transient=(not verbose)
+        ) as progress:
+            self._initialize_weights()
+
+            # Integrate bias to X to remove bias during calculating
+            X_biased = self.get_X_biased(X)
+
+            N = X_biased.shape[0]
+            y_target = self._one_hot_encode(y)
+
+            for i in range(epochs):
+                task = progress.add_task(
+                    f"Epoch {i+1}/{epochs}", 
+                    total=1, 
+                    metrics="loss: --  acc: --"
+                )
+                
+                # Compute the score vector
+                z = X_biased @ self.weights
+                # Convert the score vector to distribution vector
+                y_pred = self._softmax(z)
+                
+                # Evaluate loss and accuracy during training
+                loss = self._cross_entropy_loss(y_target, y_pred)
+                acc = self._accuracy(X, y)
+                self.loss_history.append(loss)
+                self.acc_history.append(acc)
+
+                # Compute the derivative of z
+                dz = y_pred - y_target
+                
+                # Compute the gradient
+                dw = X_biased.T @ dz / N
+
+                # Update weights by gradient descent
+                self.weights -= self.lr * dw
+
+                progress.update(task, advance=1, metrics=f"loss: {loss:.4f}  acc: {acc:.4f}")
+
+    def predict(self, X: np.ndarray) -> int:
+        """
+        Predict class labels for the given input data.
+
+        Args:
+            X (np.ndarray): Input feature matrix.
+
+        Returns:
+            np.ndarray: Predicted class indices.
+        """
+        z = np.dot(self.get_X_biased(X), self.weights)
+        y_pred = self._softmax(z)
+        return y_pred.argmax(axis=1)
+
+    def predict_proba(self, X: np.ndarray) -> np.ndarray:
+        """
+        Predict class probabilities for the given input data.
+
+        Args:
+            X (np.ndarray): Input feature matrix.
+
+        Returns:
+            np.ndarray: Matrix of class probabilities.
+        """
+        z = np.dot(self.get_X_biased(X), self.weights)
+        return self._softmax(z)
