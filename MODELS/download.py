@@ -5,7 +5,7 @@ import shutil
 
 def download_mnist_from_kaggle():
     """
-    Tải MNIST dataset từ Kaggle và giải nén vào thư mục data.
+    Tải MNIST dataset (npz format) từ Kaggle và giải nén vào thư mục data.
     
     Yêu cầu:
     - Đã cài đặt Kaggle API: pip install kaggle
@@ -14,20 +14,16 @@ def download_mnist_from_kaggle():
     
     # Đường dẫn thư mục hiện tại
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    data_dir = os.path.join(current_dir,'data')
-    download_path = os.path.join(data_dir, 'mnist-dataset.zip')
+    data_dir = os.path.join(current_dir, 'data')
+    os.makedirs(data_dir, exist_ok=True)
+    download_path = os.path.join(data_dir, 'mnist-numpy.zip')
     
     print("=" * 60)
-    print("Tải MNIST Dataset từ Kaggle")
+    print("Tải MNIST Dataset (npz) từ Kaggle")
     print("=" * 60)
     
     # Kiểm tra xem đã có dataset chưa
-    required_files = [
-        'train-images-idx3-ubyte',
-        'train-labels-idx1-ubyte',
-        't10k-images-idx3-ubyte',
-        't10k-labels-idx1-ubyte'
-    ]
+    required_files = ['mnist.npz']
     
     all_exist = all(os.path.exists(os.path.join(data_dir, f)) for f in required_files)
     if all_exist:
@@ -38,7 +34,7 @@ def download_mnist_from_kaggle():
         # Tải dataset từ Kaggle
         print("\n1. Đang tải dataset từ Kaggle...")
         subprocess.run([
-            'kaggle', 'datasets', 'download', '-d', 'hojjatk/mnist-dataset',
+            'kaggle', 'datasets', 'download', '-d', 'vikramtiwari/mnist-numpy',
             '-p', data_dir
         ], check=True)
         
@@ -56,26 +52,11 @@ def download_mnist_from_kaggle():
         os.remove(download_path)
         print("✓ Đã xóa file zip")
         
-        # Xóa các thư mục trùng lặp (chỉ giữ file ở root của data/)
-        print("\n4. Xóa các thư mục trùng lặp...")
-        duplicate_folders = [
-            't10k-images-idx3-ubyte',
-            't10k-labels-idx1-ubyte',
-            'train-images-idx3-ubyte',
-            'train-labels-idx1-ubyte'
-        ]
-        
-        for folder in duplicate_folders:
-            folder_path = os.path.join(data_dir, folder)
-            if os.path.isdir(folder_path):
-                shutil.rmtree(folder_path)
-                print(f"   ✓ Đã xóa folder: {folder}")
-        
         # Kiểm tra files
-        print("\n5. Kiểm tra files đã tải:")
+        print("\n4. Kiểm tra files đã tải:")
         for filename in os.listdir(data_dir):
             filepath = os.path.join(data_dir, filename)
-            if os.path.isfile(filepath) and filename.endswith(('-ubyte', '.gz', '.csv')):
+            if os.path.isfile(filepath):
                 size_mb = os.path.getsize(filepath) / (1024 * 1024)
                 print(f"   ✓ {filename} ({size_mb:.2f} MB)")
         
@@ -99,16 +80,17 @@ def download_mnist_from_kaggle():
 
 def download_with_curl():
     """
-    Tải MNIST dataset bằng curl (backup method).
+    Tải MNIST dataset (npz) bằng curl (backup method).
     Sử dụng khi không có Kaggle API.
     """
     
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    data_dir = os.path.join(current_dir,'data')
-    download_path = os.path.join(data_dir, 'mnist-dataset.zip')
+    data_dir = os.path.join(current_dir, 'data')
+    os.makedirs(data_dir, exist_ok=True)
+    download_path = os.path.join(data_dir, 'mnist-numpy.zip')
     
     print("=" * 60)
-    print("Tải MNIST Dataset bằng curl")
+    print("Tải MNIST Dataset (npz) bằng curl")
     print("=" * 60)
     
     try:
@@ -117,7 +99,7 @@ def download_with_curl():
         # Sử dụng curl để tải
         curl_command = [
             'curl', '-L', '-o', download_path,
-            'https://www.kaggle.com/api/v1/datasets/download/hojjatk/mnist-dataset'
+            'https://www.kaggle.com/api/v1/datasets/download/vikramtiwari/mnist-numpy'
         ]
         
         subprocess.run(curl_command, check=True)
@@ -133,19 +115,6 @@ def download_with_curl():
         
         # Xóa file zip
         os.remove(download_path)
-        
-        # Xóa các thư mục trùng lặp
-        duplicate_folders = [
-            't10k-images-idx3-ubyte',
-            't10k-labels-idx1-ubyte',
-            'train-images-idx3-ubyte',
-            'train-labels-idx1-ubyte'
-        ]
-        
-        for folder in duplicate_folders:
-            folder_path = os.path.join(data_dir, folder)
-            if os.path.isdir(folder_path):
-                shutil.rmtree(folder_path)
         
         print("✓ Hoàn tất!")
         
