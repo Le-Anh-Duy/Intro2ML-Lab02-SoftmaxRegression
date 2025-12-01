@@ -19,9 +19,11 @@ class PixelSoftmax(SoftmaxRegression):
             X = X.reshape(X.shape[0], -1)
         
         # Normalize
-        if np.max(X) > 1.0:
-            return X / 255.0
-        return X
+        epsilon = 1e-8
+        mean = np.mean(X, axis=0)
+        std = np.std(X, axis=0)
+        
+        return (X - mean) / (std + epsilon)
 
     def fit(self, X: np.ndarray, y: np.ndarray, verbose=True, epochs=100):
         """
