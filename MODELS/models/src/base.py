@@ -135,7 +135,8 @@ class SoftmaxRegression:
                 
                 # Evaluate loss and accuracy during training
                 loss = self._cross_entropy_loss(y_target, y_pred)
-                acc = self._accuracy(X, y)
+                pred_labels = np.argmax(y_pred, axis=1)
+                acc = np.mean(pred_labels == y)
                 self.loss_history.append(loss)
                 self.acc_history.append(acc)
 

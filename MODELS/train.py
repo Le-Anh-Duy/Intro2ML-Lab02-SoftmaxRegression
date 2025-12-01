@@ -18,7 +18,7 @@ try:
     from dataset import dataset
     # Import 3 main models
     from model_pixel import PixelSoftmax
-    # from model_edge import EdgeSoftmax
+    from model_edge import EdgeSoftmax
     # from model_pca import PCASoftmax
 except ImportError as e:
     print(f"Import Error: {e}")
@@ -93,7 +93,7 @@ def main():
     # --- 3. Model Configuration ---
     model_configs = [
         ("Pixel Model", PixelSoftmax, {'learning_rate': 0.1}),
-        # ("Edge Model", EdgeSoftmax, {'learning_rate': 0.1}),
+        ("Edge Model", EdgeSoftmax, {'learning_rate': 0.1}),
         # ("PCA Model", PCASoftmax, {'learning_rate': 0.1, 'n_components': 50}),
     ]
 
@@ -106,7 +106,7 @@ def main():
     # 
     num_features = X_train_norm.shape[1]
     num_classes = 10
-    EPOCHS = 10
+    EPOCHS = 100
 
     # --- 4. Main Loop ---
     for name, ModelClass, kwargs in model_configs:
