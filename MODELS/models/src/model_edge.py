@@ -16,10 +16,9 @@ class EdgeSoftmax(SoftmaxRegression):
         Returns:
             np.ndarray: Normalized edge features (N, 784).
         """
-        # 1. Reshape về dạng ảnh (N, 28, 28) để xử lý ảnh
+        # 1. Reshape
         if X.ndim == 2:
             N = X.shape[0]
-            # Giả sử ảnh vuông 28x28
             side = int(np.sqrt(X.shape[1])) 
             images = X.reshape(N, side, side)
         else:
@@ -28,26 +27,22 @@ class EdgeSoftmax(SoftmaxRegression):
 
         edge_features = []
 
-        # 2. Loop qua từng ảnh để tính Sobel
+        # 2. Sobel Edge Detection
         for i in range(N):
             img = images[i]
             
-            # Lưu ý: OpenCV Sobel cần type phù hợp, float là tốt nhất để tính toán
-            # Tính đạo hàm theo phương X (dọc)
+            # Calculate gradient
             gx = cv2.Sobel(img, cv2.CV_64F, 1, 0, ksize=3)
-            # Tính đạo hàm theo phương Y (ngang)
             gy = cv2.Sobel(img, cv2.CV_64F, 0, 1, ksize=3)
             
-            # Tính độ lớn vector gradient (Magnitude)
-            # Đây chính là "độ đậm" của cạnh
+            # Gradient magnitude
             magnitude = np.sqrt(gx**2 + gy**2)
             
             edge_features.append(magnitude.flatten())
 
         X_edge = np.array(edge_features)
 
-        # 3. Normalize (Standardization giống PixelSoftmax)
-        # Giúp Gradient Descent hội tụ nhanh hơn
+        # 3. Normalize
         epsilon = 1e-8
         mean = np.mean(X_edge, axis=0)
         std = np.std(X_edge, axis=0)
@@ -63,7 +58,6 @@ class EdgeSoftmax(SoftmaxRegression):
             
         X_proc = self._extract_sobel_normalize(X)
         
-        # Gọi hàm fit của class cha (SoftmaxRegression)
         super().fit(X_proc, y, verbose=verbose, epochs=epochs)
 
     def predict(self, X: np.ndarray) -> np.ndarray:
