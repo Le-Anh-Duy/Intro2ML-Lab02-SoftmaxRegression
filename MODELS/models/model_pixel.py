@@ -2,8 +2,9 @@ import numpy as np
 from softmax_regression import SoftmaxRegression
 
 class PixelSoftmax(SoftmaxRegression):
-    def __init__(self, num_features, num_classes, learning_rate=0.5, **kwargs):
-        super().__init__(num_features, num_classes, learning_rate=learning_rate, **kwargs)
+    def __init__(self, num_features, num_classes, **kwargs):
+        super().__init__(num_features, num_classes, **kwargs)
+
     def _flatten_normalize(self, X: np.ndarray) -> np.ndarray:
         """
         Preprocess data: Flatten image and normalize pixel values.
@@ -25,7 +26,7 @@ class PixelSoftmax(SoftmaxRegression):
         
         return (X - mean) / (std + epsilon)
 
-    def fit(self, X: np.ndarray, y: np.ndarray, verbose=True, epochs=100):
+    def fit(self, X: np.ndarray, y: np.ndarray, verbose=True, learning_rate=0.0001, epochs=100):
         """
         Train the Pixel-based model.
 
@@ -39,9 +40,9 @@ class PixelSoftmax(SoftmaxRegression):
         """
         X_proc = self._flatten_normalize(X)
         
-        super().fit(X_proc, y, verbose=verbose, epochs=epochs)
+        super().fit(X_proc, y, verbose=verbose, learning_rate=learning_rate, epochs=epochs)
 
-    def predict(self, X: np.ndarray) -> int:
+    def predict(self, X: np.ndarray, use_best=True) -> int:
         """
         Predict class labels for raw input images.
 
@@ -52,4 +53,17 @@ class PixelSoftmax(SoftmaxRegression):
             np.ndarray: Predicted class indices.
         """
         X_proc = self._flatten_normalize(X)
-        return super().predict(X_proc)
+        return super().predict(X_proc, use_best=use_best)
+    
+    def predict_proba(self, X: np.ndarray, use_best=True) -> np.ndarray:
+        """
+        Predict class probabilities for raw input images.
+
+        Args:
+            X (np.ndarray): Raw input images.
+
+        Returns:
+            np.ndarray: Predicted class probabilities.
+        """
+        X_proc = self._flatten_normalize(X)
+        return super().predict_proba(X_proc, use_best=use_best)

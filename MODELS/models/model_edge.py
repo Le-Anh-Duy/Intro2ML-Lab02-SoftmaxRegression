@@ -3,8 +3,8 @@ import cv2
 from softmax_regression import SoftmaxRegression
 
 class EdgeSoftmax(SoftmaxRegression):
-    def __init__(self, num_features, num_classes, learning_rate=0.5, **kwargs):
-        super().__init__(num_features, num_classes, learning_rate=learning_rate, **kwargs)
+    def __init__(self, num_features, num_classes, **kwargs):
+        super().__init__(num_features, num_classes, **kwargs)
 
     def _extract_sobel_normalize(self, X: np.ndarray) -> np.ndarray:
         """
@@ -49,7 +49,7 @@ class EdgeSoftmax(SoftmaxRegression):
         
         return (X_edge - mean) / (std + epsilon)
 
-    def fit(self, X: np.ndarray, y: np.ndarray, verbose=True, epochs=100):
+    def fit(self, X: np.ndarray, y: np.ndarray, verbose=True, learning_rate=0.0001, epochs=100):
         """
         Train the Edge-based model.
         """
@@ -58,11 +58,18 @@ class EdgeSoftmax(SoftmaxRegression):
             
         X_proc = self._extract_sobel_normalize(X)
         
-        super().fit(X_proc, y, verbose=verbose, epochs=epochs)
+        super().fit(X_proc, y, verbose=verbose, learning_rate=learning_rate, epochs=epochs)
 
-    def predict(self, X: np.ndarray) -> np.ndarray:
+    def predict(self, X: np.ndarray, use_best=True) -> int:
         """
         Predict class labels using edge features.
         """
         X_proc = self._extract_sobel_normalize(X)
-        return super().predict(X_proc)
+        return super().predict(X_proc, use_best=use_best)
+    
+    def predict_proba(self, X: np.ndarray, use_best=True) -> np.ndarray:
+        """
+        Predict class probabilities using edge features.
+        """
+        X_proc = self._extract_sobel_normalize(X)
+        return super().predict_proba(X_proc, use_best=use_best)
