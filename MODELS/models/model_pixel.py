@@ -1,5 +1,5 @@
 import numpy as np
-from softmax_regression import SoftmaxRegression
+from models.softmax_regression import SoftmaxRegression
 
 class PixelSoftmax(SoftmaxRegression):
     def __init__(self, num_features, num_classes, **kwargs):

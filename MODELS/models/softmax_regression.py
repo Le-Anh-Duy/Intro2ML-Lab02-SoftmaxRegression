@@ -108,26 +108,24 @@ class SoftmaxRegression:
             verbose (bool): Whether to display the progress bar. Defaults to True.
             epochs (int): Number of training iterations. Defaults to 100.
         """
-        console = Console(height=np.inf)
-        with Progress(
-            TextColumn("[bold blue]{task.description}"),
-            BarColumn(),
-            TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
-            TimeRemainingColumn(),
-            TextColumn("{task.fields[metrics]}"),
-            console=console,
-            transient=(not verbose)
-        ) as progress:
-            self._initialize_weights()
-            self._min_loss = 2e9
+        self._initialize_weights()
+        self._min_loss = 2e9
 
-            # Integrate bias to X to remove bias during calculating
-            X_biased = self.get_X_biased(X)
+		# Integrate bias to X to remove bias during calculating
+        X_biased = self.get_X_biased(X)
 
-            N = X_biased.shape[0]
-            y_target = self._one_hot_encode(y)
+        N = X_biased.shape[0]
+        y_target = self._one_hot_encode(y)
 
-            for i in range(epochs):
+        for i in range(epochs):
+            with Progress(
+                TextColumn("[bold blue]{task.description}"),
+                BarColumn(),
+                TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+                TimeRemainingColumn(),
+                TextColumn("{task.fields[metrics]}"),
+                disable=(not verbose)
+            ) as progress:
                 task = progress.add_task(
                     f"Epoch {i+1}/{epochs}", 
                     total=1, 
@@ -156,8 +154,8 @@ class SoftmaxRegression:
 
                 # Save best weights
                 if loss < self._min_loss:
-                  self._min_loss = loss
-                  self.best_weights = self.weights.copy()
+                    self._min_loss = loss
+                    self.best_weights = self.weights.copy()
 
                 progress.update(task, advance=1, metrics=f"loss: {loss:.4f}  acc: {acc:.4f}")
 
