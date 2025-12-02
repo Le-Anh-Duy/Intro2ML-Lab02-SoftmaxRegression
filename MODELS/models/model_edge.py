@@ -1,6 +1,6 @@
 import numpy as np
 import cv2
-from base import SoftmaxRegression
+from softmax_regression import SoftmaxRegression
 
 class EdgeSoftmax(SoftmaxRegression):
     def __init__(self, num_features, num_classes, learning_rate=0.5, **kwargs):
