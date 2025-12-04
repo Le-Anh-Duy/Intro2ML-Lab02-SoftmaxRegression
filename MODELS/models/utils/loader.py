@@ -12,9 +12,9 @@ def load_dataset(path: str):
     """
     data = np.load(path)
 
-    X_train = np.array(data["X_train"])
+    X_train = np.array(data["X_train"], dtype=np.float32)
     y_train = np.array(data["y_train"])
-    X_test = np.array(data["X_test"])
+    X_test = np.array(data["X_test"], dtype=np.float32)
     y_test = np.array(data["y_test"])
 
     return (X_train, y_train, X_test, y_test)

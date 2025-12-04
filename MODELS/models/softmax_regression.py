@@ -29,7 +29,7 @@ class SoftmaxRegression:
         if self.weights is not None and resume:
             self.best_weights = self.weights.copy()
             return
-        self.weights = np.zeros((self.num_features + 1, self.num_classes))
+        self.weights = np.zeros((self.num_features + 1, self.num_classes), dtype=np.float32)
         self.best_weights = self.weights.copy()
 
     def get_X_biased(self, X: np.ndarray):
