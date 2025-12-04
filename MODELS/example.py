@@ -4,11 +4,12 @@ from models.metrics import *
 from models.softmax_regression import *
 from models.model_pixel import PixelSoftmax
 from models.model_edge import EdgeSoftmax
+from models.model_pca import PCASoftmax
 
 X_train, y_train, X_test, y_test = load_dataset('data/mnist_data.npz')
 
-model = PixelSoftmax(X_train[0].size, 10)
-model.fit(X_train.reshape(X_train.shape[0], -1), y_train, learning_rate=0.1, epochs=100)
+model = PCASoftmax(20, 10)
+model.fit(X_train.reshape(X_train.shape[0], -1), y_train, learning_rate=0.10, epochs=50)
 
 y_pred = model.predict(X_test.reshape(X_test.shape[0], -1))
 

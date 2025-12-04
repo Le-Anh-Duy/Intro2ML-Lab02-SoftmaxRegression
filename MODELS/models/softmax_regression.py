@@ -149,16 +149,14 @@ class SoftmaxRegression:
                 
                 # Evaluate loss and accuracy during training
                 loss = self._cross_entropy_loss(y_target, y_pred)
-                acc = self._accuracy(X, y, use_best=False)
                 self.loss_history.append(loss)
-                self.acc_history.append(acc)
 
                 # Save best weights
                 if loss < self._min_loss:
                     self._min_loss = loss
                     self.best_weights = self.weights.copy()
 
-                progress.update(task, advance=1, metrics=f"loss: {loss:.4f}  acc: {acc:.4f}")
+                progress.update(task, advance=1, metrics=f"loss: {loss:.4f}")
 
     def predict(self, X: np.ndarray, use_best=True) -> int:
         """
