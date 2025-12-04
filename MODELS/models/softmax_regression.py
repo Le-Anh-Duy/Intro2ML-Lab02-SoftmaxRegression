@@ -1,5 +1,6 @@
 import numpy as np
 from rich.progress import *
+import os
 
 class SoftmaxRegression:
     def __init__(self, num_features: int, num_classes: int):
@@ -187,3 +188,49 @@ class SoftmaxRegression:
         """
         z = np.dot(self.get_X_biased(X), self.best_weights if use_best else self.weights)
         return self._softmax(z)
+    
+    def save_best_model(self, model_path: str) -> bool:
+        """
+        Save (best_weights) into file .npy
+        """
+        try:
+            if self.best_weights is None:
+                print("Error: No best weights to save.")
+                return False
+            np.save(model_path, self.best_weights)
+            
+            print(f"Model saved successfully to {model_path}")
+            return True
+            
+        except Exception as e:
+            # Bắt mọi lỗi (I/O, permission, v.v.)
+            print(f"Error saving model: {e}")
+            return False
+
+    def load_weight(self, weight_path: str) -> bool:
+        """
+        Đọc trọng số từ file .npy và gán vào model hiện tại
+        """
+        try:
+            # Xử lý trường hợp người dùng quên điền đuôi .npy
+            if not os.path.exists(weight_path) and os.path.exists(weight_path + ".npy"):
+                weight_path += ".npy"
+            
+            # Load file
+            weights = np.load(weight_path)
+            
+            # Gán trọng số vừa load vào biến trọng số chính của class (self.W)
+            self.W = weights
+            
+            # (Tùy chọn) Cập nhật luôn best_weights để đồng bộ
+            self.best_weights = weights
+            
+            print(f"Weights loaded successfully from {weight_path}")
+            return True
+            
+        except FileNotFoundError:
+            print(f"Error: File not found at {weight_path}")
+            return False
+        except Exception as e:
+            print(f"Error loading weights: {e}")
+            return False    
