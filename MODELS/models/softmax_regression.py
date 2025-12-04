@@ -125,7 +125,7 @@ class SoftmaxRegression:
             # Trả về dữ liệu tương ứng với chỉ mục đó
             yield X[batch_indices], y[batch_indices]
 
-    def fit(self, X: np.ndarray, y: np.ndarray, verbose=True, batch_size=64, learning_rate=0.0001, epochs=100, resume = False):
+    def fit(self, X: np.ndarray, y: np.ndarray, verbose=True, batch_size=64, learning_rate=0.01, epochs=100, resume = False):
         """
         Train the model using Gradient Descent.
 

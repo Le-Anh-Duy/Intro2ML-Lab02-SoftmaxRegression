@@ -2,8 +2,8 @@ import numpy as np
 from models.softmax_regression import SoftmaxRegression
 
 class PCASoftmax(SoftmaxRegression):
-    def __init__(self, num_features, num_classes, **kwargs):
-        super().__init__(num_features, num_classes, **kwargs)
+    def __init__(self, num_features, num_classes, *args, **kwargs):
+        super().__init__(num_features, num_classes, *args, **kwargs)
 
         self.n_components = num_features
         self.components = None # Đây là ma trận U_k (các hướng chính)
@@ -74,7 +74,7 @@ class PCASoftmax(SoftmaxRegression):
         # 5. Lấy K vector đầu tiên
         self.components = sorted_eigenvectors[:, :self.n_components]
 
-    def fit(self, X: np.ndarray, y: np.ndarray, verbose=True, learning_rate=0.0001, epochs=100):
+    def fit(self, X: np.ndarray, y: np.ndarray, *args, **kwargs):
         """
         Train the Pixel-based model.
 
@@ -91,7 +91,7 @@ class PCASoftmax(SoftmaxRegression):
         X_train = self._transform(X_proc)
         print(X_train.shape)
 
-        super().fit(X_train, y, verbose=verbose, learning_rate=learning_rate, epochs=epochs)
+        super().fit(X_train, y, *args, **kwargs)
 
     def predict(self, X: np.ndarray, use_best=True) -> int:
         """

@@ -2,8 +2,8 @@ import numpy as np
 from models.softmax_regression import SoftmaxRegression
 
 class PixelSoftmax(SoftmaxRegression):
-    def __init__(self, num_features, num_classes, **kwargs):
-        super().__init__(num_features, num_classes, **kwargs)
+    def __init__(self, num_features, num_classes, *args, **kwargs):
+        super().__init__(num_features, num_classes, *args, **kwargs)
 
     def _flatten_normalize(self, X: np.ndarray) -> np.ndarray:
         """
@@ -26,7 +26,7 @@ class PixelSoftmax(SoftmaxRegression):
         
         return (X - mean) / (std + epsilon)
 
-    def fit(self, X: np.ndarray, y: np.ndarray, verbose=True, learning_rate=0.0001, epochs=100):
+    def fit(self, X: np.ndarray, y: np.ndarray, *args, **kwargs):
         """
         Train the Pixel-based model.
 
@@ -40,7 +40,7 @@ class PixelSoftmax(SoftmaxRegression):
         """
         X_proc = self._flatten_normalize(X)
         
-        super().fit(X_proc, y, verbose=verbose, learning_rate=learning_rate, epochs=epochs)
+        super().fit(X_proc, y, *args, **kwargs)
 
     def predict(self, X: np.ndarray, use_best=True) -> int:
         """

@@ -3,8 +3,8 @@ import cv2
 from models.softmax_regression import SoftmaxRegression
 
 class EdgeSoftmax(SoftmaxRegression):
-    def __init__(self, num_features, num_classes, **kwargs):
-        super().__init__(num_features, num_classes, **kwargs)
+    def __init__(self, num_features, num_classes, *args, **kwargs):
+        super().__init__(num_features, num_classes, *args, **kwargs)
 
     def _extract_sobel_normalize(self, X: np.ndarray) -> np.ndarray:
         """
@@ -49,16 +49,15 @@ class EdgeSoftmax(SoftmaxRegression):
         
         return (X_edge - mean) / (std + epsilon)
 
-    def fit(self, X: np.ndarray, y: np.ndarray, verbose=True, learning_rate=0.0001, epochs=100):
+    def fit(self, X: np.ndarray, y: np.ndarray, *args, **kwargs):
         """
         Train the Edge-based model.
         """
-        if verbose:
-            print("Feature Extraction: Computing Sobel Edges...")
+        print("Feature Extraction: Computing Sobel Edges...")
             
         X_proc = self._extract_sobel_normalize(X)
         
-        super().fit(X_proc, y, verbose=verbose, learning_rate=learning_rate, epochs=epochs)
+        super().fit(X_proc, y, *args, **kwargs)
 
     def predict(self, X: np.ndarray, use_best=True) -> int:
         """
