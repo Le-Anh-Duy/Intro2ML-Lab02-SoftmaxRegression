@@ -157,3 +157,38 @@ def visualize_block_features(model, X_sample):
 # model = BlockSoftmax(num_classes=10, grid_size=(7, 7))
 # model.fit(X_train, y_train)
 # visualize_block_features(model, X_train[0])
+
+import matplotlib.pyplot as plt
+
+def visualize_hog_features(model, X_sample):
+    """
+    Visualize HOG của 1 ảnh mẫu
+    """
+    # Lấy 1 ảnh mẫu
+    img = X_sample.reshape(28, 28).astype(np.float32)
+    
+    # Tính gradient lại để vẽ
+    gx = cv2.Sobel(img, cv2.CV_32F, 1, 0, ksize=1)
+    gy = cv2.Sobel(img, cv2.CV_32F, 0, 1, ksize=1)
+    mag, angle = cv2.cartToPolar(gx, gy, angleInDegrees=True)
+    
+    # Vẽ
+    fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(12, 4))
+    
+    ax1.imshow(img, cmap='gray')
+    ax1.set_title("Original Image")
+    
+    # Vẽ độ lớn gradient (Magnitude) - Sẽ thấy biên của chữ số sáng lên
+    ax2.imshow(mag, cmap='hot')
+    ax2.set_title("Gradient Magnitude (Edges)")
+    
+    # Vẽ Histogram (Feature vector)
+    hog_vec = model._compute_hog_single(img)
+    ax3.bar(range(len(hog_vec)), hog_vec)
+    ax3.set_title("HOG Feature Vector")
+    
+    plt.show()
+
+# Cách dùng:
+# model = HOGSoftmax(num_classes=10)
+# visualize_hog_features(model, X_train[0])
