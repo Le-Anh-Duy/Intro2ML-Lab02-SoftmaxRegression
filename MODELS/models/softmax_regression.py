@@ -20,12 +20,15 @@ class SoftmaxRegression:
         self.loss_history = []
         self.acc_history = []
 
-    def _initialize_weights(self):
+    def _initialize_weights(self, resume = False):
         """
         Initialize weights to zeros.
         
         The shape is (num_features + 1, num_classes) to accommodate the bias term.
         """
+        if self.weights is not None and resume:
+            self.best_weights = self.weights.copy()
+            return
         self.weights = np.zeros((self.num_features + 1, self.num_classes))
         self.best_weights = self.weights.copy()
 
@@ -99,7 +102,7 @@ class SoftmaxRegression:
         y_pred = self.predict(X, use_best=use_best)
         return np.sum(y_pred == y) / y.size
 
-    def fit(self, X: np.ndarray, y: np.ndarray, verbose=True, learning_rate=0.0001, epochs=100):
+    def fit(self, X: np.ndarray, y: np.ndarray, verbose=True, learning_rate=0.0001, epochs=100, resume = False):
         """
         Train the model using Gradient Descent.
 
@@ -109,7 +112,7 @@ class SoftmaxRegression:
             verbose (bool): Whether to display the progress bar. Defaults to True.
             epochs (int): Number of training iterations. Defaults to 100.
         """
-        self._initialize_weights()
+        self._initialize_weights(resume)
         self._min_loss = 2e9
 
 		# Integrate bias to X to remove bias during calculating
@@ -132,7 +135,7 @@ class SoftmaxRegression:
                     total=1, 
                     metrics="loss: --  acc: --"
                 )
-                
+
                 # Compute the score vector
                 z = X_biased @ self.weights
                 # Convert the score vector to distribution vector
@@ -140,7 +143,7 @@ class SoftmaxRegression:
 
                 # Compute the derivative of z
                 dz = y_pred - y_target
-                
+
                 # Compute the gradient
                 dw = X_biased.T @ dz / N
 
@@ -157,6 +160,7 @@ class SoftmaxRegression:
                     self.best_weights = self.weights.copy()
 
                 progress.update(task, advance=1, metrics=f"loss: {loss:.4f}")
+
 
     def predict(self, X: np.ndarray, use_best=True) -> int:
         """
@@ -232,3 +236,40 @@ class SoftmaxRegression:
         except Exception as e:
             print(f"Error loading weights: {e}")
             return False    
+    
+    def batch_fit(self, X: np.ndarray, y: np.ndarray, verbose=True, learning_rate=0.0001, resume = False):
+        """
+        Train the model using Gradient Descent.
+
+        Args:
+            X (np.ndarray): Training features of shape (n, m).
+            y (np.ndarray): Training labels of shape (n,).
+            verbose (bool): Whether to display the progress bar. Defaults to True.
+            epochs (int): Number of training iterations. Defaults to 100.
+        """
+        self._initialize_weights(resume)
+        self._min_loss = 2e9
+
+		# Integrate bias to X to remove bias during calculating
+        X_biased = self.get_X_biased(X)
+
+        N = X_biased.shape[0]
+        y_target = self._one_hot_encode(y)
+
+        # Compute the score vector
+        z = X_biased @ self.weights
+        # Convert the score vector to distribution vector
+        y_pred = self._softmax(z)
+
+        # Compute the derivative of z
+        dz = y_pred - y_target
+        
+        # Compute the gradient
+        dw = X_biased.T @ dz / N
+        # Update weights by gradient descent
+        self.weights -= learning_rate * dw
+        
+        # Evaluate loss and accuracy during training
+        loss = self._cross_entropy_loss(y_target, y_pred)
+        
+        return loss
