@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from models.softmax_regression import SoftmaxRegression
 import os
 class BlockSoftmax(SoftmaxRegression):
-    def __init__(self, num_classes, grid_size=(7, 7), **kwargs):
+    def __init__(self, num_classes, grid_size=(7, 7), *args, **kwargs):
         """
         grid_size: Kích thước lưới chia (mặc định 7x7 ô)
         """
@@ -11,7 +11,7 @@ class BlockSoftmax(SoftmaxRegression):
         self.grid_size = grid_size
         self.num_block_features = grid_size[0] * grid_size[1]
         
-        super().__init__(num_features=self.num_block_features, num_classes=num_classes, **kwargs)
+        super().__init__(num_features=self.num_block_features, num_classes=num_classes, *args, **kwargs)
 
     def _transform(self, X: np.ndarray) -> np.ndarray:
         """
@@ -46,12 +46,12 @@ class BlockSoftmax(SoftmaxRegression):
         # 4. Duỗi phẳng thành vector feature (N, 49)
         return X_blocked.reshape(N, -1)
 
-    def fit(self, X: np.ndarray, y: np.ndarray, verbose=True, learning_rate=0.1, epochs=100):
+    def fit(self, X: np.ndarray, y: np.ndarray, *args, **kwargs):
         print(f"Applying Block Averaging {self.grid_size}...")
         X_block = self._transform(X)
         print(f"Block Feature shape: {X_block.shape}") # Ví dụ: (60000, 49)
         
-        super().fit(X_block, y, verbose=verbose, learning_rate=learning_rate, epochs=epochs)
+        super().fit(X_block, y, *args, **kwargs)
 
     def predict(self, X: np.ndarray, use_best=True) -> int:
         X_block = self._transform(X)

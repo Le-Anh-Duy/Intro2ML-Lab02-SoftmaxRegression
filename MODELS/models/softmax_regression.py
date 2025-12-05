@@ -1,9 +1,10 @@
 import numpy as np
 from rich.progress import *
 import os
+from models.optimizer import *
 
 class SoftmaxRegression:
-    def __init__(self, num_features: int, num_classes: int):
+    def __init__(self, num_features: int, num_classes: int, optimizer = GD()):
         """
         Initialize the Softmax Regression model.
 
@@ -14,6 +15,7 @@ class SoftmaxRegression:
         """
         self.num_features = num_features
         self.num_classes = num_classes
+        self.optimizer = optimizer
         self.weights: np.ndarray = None
         self.best_weights: np.ndarray = None
         self._min_loss = None
@@ -103,7 +105,28 @@ class SoftmaxRegression:
         y_pred = self.predict(X, use_best=use_best)
         return np.sum(y_pred == y) / y.size
 
-    def fit(self, X: np.ndarray, y: np.ndarray, verbose=True, learning_rate=0.0001, epochs=100, resume = False):
+    def _generate_batches(self, X, y, batch_size, shuffle=True):
+        """
+        Generator trả về từng batch dữ liệu đã được shuffle.
+        Tương đương với dataset.shuffle().batch() trong TF.
+        """
+        n_samples = X.shape[0]
+        indices = np.arange(n_samples) # Tạo mảng chỉ mục [0, 1, 2, ..., N-1]
+
+        if shuffle:
+            np.random.shuffle(indices) # Xáo trộn chỉ mục
+
+        # Duyệt qua các chỉ mục theo từng bước nhảy (batch_size)
+        for start_idx in range(0, n_samples, batch_size):
+            end_idx = min(start_idx + batch_size, n_samples)
+            
+            # Lấy ra mảng chỉ mục cho batch hiện tại
+            batch_indices = indices[start_idx:end_idx]
+            
+            # Trả về dữ liệu tương ứng với chỉ mục đó
+            yield X[batch_indices], y[batch_indices]
+
+    def fit(self, X: np.ndarray, y: np.ndarray, verbose=True, batch_size=64, learning_rate=0.01, epochs=100, resume = False):
         """
         Train the model using Gradient Descent.
 
@@ -119,7 +142,6 @@ class SoftmaxRegression:
 		# Integrate bias to X to remove bias during calculating
         X_biased = self.get_X_biased(X)
 
-        N = X_biased.shape[0]
         y_target = self._one_hot_encode(y)
 
         for i in range(epochs):
@@ -133,35 +155,35 @@ class SoftmaxRegression:
             ) as progress:
                 task = progress.add_task(
                     f"Epoch {i+1}/{epochs}", 
-                    total=1, 
+                    total=(X_biased.shape[0] + batch_size - 1) // batch_size,
                     metrics="loss: --  acc: --"
                 )
+                for X_batch, y_batch in self._generate_batches(X_biased, y_target, batch_size):
+                    N = X_batch.shape[0]
+                    # Compute the score vector
+                    z = X_batch @ self.weights
+                    # Convert the score vector to distribution vector
+                    y_pred = self._softmax(z)
 
-                # Compute the score vector
-                z = X_biased @ self.weights
-                # Convert the score vector to distribution vector
-                y_pred = self._softmax(z)
+                    # Compute the derivative of z
+                    dz = y_pred - y_batch
 
-                # Compute the derivative of z
-                dz = y_pred - y_target
+                    # Compute the gradient
+                    dw = X_batch.T @ dz / N
 
-                # Compute the gradient
-                dw = X_biased.T @ dz / N
+                    # Update weights by gradient descent
+                    self.weights = self.optimizer.apply(self.weights, dw, learning_rate)
+                    
+                    # Evaluate loss and accuracy during training
+                    loss = self._cross_entropy_loss(y_batch, y_pred)
+                    self.loss_history.append(loss)
 
-                # Update weights by gradient descent
-                self.weights -= learning_rate * dw
-                
-                # Evaluate loss and accuracy during training
-                loss = self._cross_entropy_loss(y_target, y_pred)
-                self.loss_history.append(loss)
+                    # Save best weights
+                    if loss < self._min_loss:
+                        self._min_loss = loss
+                        self.best_weights = self.weights.copy()
 
-                # Save best weights
-                if loss < self._min_loss:
-                    self._min_loss = loss
-                    self.best_weights = self.weights.copy()
-
-                progress.update(task, advance=1, metrics=f"loss: {loss:.4f}")
-
+                    progress.update(task, advance=1, metrics=f"loss: {loss:.4f}")
 
     def predict(self, X: np.ndarray, use_best=True) -> int:
         """

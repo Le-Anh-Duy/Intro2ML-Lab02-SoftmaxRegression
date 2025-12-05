@@ -4,7 +4,7 @@ from models.softmax_regression import SoftmaxRegression
 import os
 
 class HOGSoftmax(SoftmaxRegression):
-    def __init__(self, num_classes, bins=9, cell_grid=(4, 4), **kwargs):
+    def __init__(self, num_classes, bins=9, cell_grid=(4, 4), *args, **kwargs):
         """
         bins: Số lượng hướng gradient (ví dụ 9 hướng từ 0-180 độ)
         cell_grid: Chia ảnh thành lưới (4x4 cells)
@@ -13,7 +13,7 @@ class HOGSoftmax(SoftmaxRegression):
         # Features = (số cells ngang * số cells dọc) * số bins
         self.num_hog_features = cell_grid[0] * cell_grid[1] * bins
         
-        super().__init__(num_features=self.num_hog_features, num_classes=num_classes, **kwargs)
+        super().__init__(num_features=self.num_hog_features, num_classes=num_classes, *args, **kwargs)
         
         self.bins = bins
         self.cell_grid = cell_grid
@@ -76,12 +76,12 @@ class HOGSoftmax(SoftmaxRegression):
         norm = np.linalg.norm(hog_features, axis=1, keepdims=True)
         return hog_features / (norm + 1e-6)
 
-    def fit(self, X: np.ndarray, y: np.ndarray, verbose=True, learning_rate=0.1, epochs=100):
+    def fit(self, X: np.ndarray, y: np.ndarray, *args, **kwargs):
         print("Extracting HOG features...")
         X_hog = self._transform(X)
         print(f"HOG Feature shape: {X_hog.shape}") # Ví dụ: (60000, 144)
         
-        super().fit(X_hog, y, verbose=verbose, learning_rate=learning_rate, epochs=epochs)
+        super().fit(X_hog, y, *args, **kwargs)
 
     def predict(self, X: np.ndarray, use_best=True) -> int:
         X_hog = self._transform(X)
