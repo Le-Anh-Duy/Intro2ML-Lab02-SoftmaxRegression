@@ -1,6 +1,7 @@
 import numpy as np
 import cv2
 from models.softmax_regression import SoftmaxRegression
+import os
 
 class HOGSoftmax(SoftmaxRegression):
     def __init__(self, num_classes, bins=9, cell_grid=(4, 4), **kwargs):
@@ -85,3 +86,114 @@ class HOGSoftmax(SoftmaxRegression):
     def predict(self, X: np.ndarray, use_best=True) -> int:
         X_hog = self._transform(X)
         return super().predict(X_hog, use_best=use_best)
+    
+    def predict_proba(self, X: np.ndarray, use_best=True) -> int:
+        X_hog = self._transform(X)
+        return super().predict_proba(X_hog, use_best=use_best)
+    
+    def get_feature_visualization(self, sample_image: np.ndarray) -> np.ndarray:
+        """
+        Visualize HOG features as a heatmap showing gradient strength in each cell.
+        
+        Args:
+            sample_image (np.ndarray): Input image (28, 28) or (784,).
+            
+        Returns:
+            np.ndarray: HOG feature heatmap (28, 28).
+        """
+        # Reshape if needed
+        if sample_image.ndim == 1:
+            sample_image = sample_image.reshape(1, 28, 28)
+        elif sample_image.ndim == 2:
+            sample_image = sample_image.reshape(1, 28, 28)
+        
+        # Extract HOG features
+        hog_features = self._transform(sample_image).flatten()
+        
+        # Reshape to (cell_grid[0], cell_grid[1], bins)
+        hog_grid = hog_features.reshape(self.cell_grid[0], self.cell_grid[1], self.bins)
+        
+        # Sum across bins to get total gradient magnitude per cell
+        cell_importance = np.sum(hog_grid, axis=2)
+        
+        # Normalize to [0, 1]
+        if cell_importance.max() > 0:
+            cell_importance = cell_importance / cell_importance.max()
+        
+        # Upsample to 28x28 for visualization
+        cell_h = 28 // self.cell_grid[0]
+        cell_w = 28 // self.cell_grid[1]
+        
+        vis = np.repeat(np.repeat(cell_importance, cell_h, axis=0), cell_w, axis=1)
+        
+        return vis[:28, :28]
+    
+    def save_best_model(self, model_path: str) -> bool:
+        """
+        Save HOGSoftmax model including HOG parameters.
+        Saves: best_weights, bins, cell_grid
+        """
+        try:
+            if self.best_weights is None:
+                print("Error: No best weights to save.")
+                return False
+            
+            # Handle .npz extension
+            if not model_path.endswith('.npz'):
+                model_path = model_path.replace('.npy', '.npz')
+            
+            # Save all parameters
+            np.savez(
+                model_path,
+                best_weights=self.best_weights,
+                bins=np.array([self.bins]),
+                cell_grid=np.array(self.cell_grid),
+                num_classes=self.num_classes,
+                num_features=self.num_features
+            )
+            
+            print(f"HOGSoftmax model saved successfully to {model_path}")
+            return True
+            
+        except Exception as e:
+            print(f"Error saving model: {e}")
+            return False
+    
+    def load_weight(self, weight_path: str) -> bool:
+        """
+        Load HOGSoftmax model including HOG parameters.
+        Loads: best_weights, bins, cell_grid
+        """
+        try:
+            # Handle file extension
+            if not os.path.exists(weight_path):
+                if os.path.exists(weight_path + ".npz"):
+                    weight_path += ".npz"
+                elif os.path.exists(weight_path.replace('.npy', '.npz')):
+                    weight_path = weight_path.replace('.npy', '.npz')
+            
+            # Load file
+            data = np.load(weight_path)
+            
+            # Load all parameters
+            self.best_weights = data['best_weights']
+            self.weights = self.best_weights.copy()
+            
+            if 'bins' in data:
+                self.bins = int(data['bins'][0])
+            if 'cell_grid' in data:
+                self.cell_grid = tuple(data['cell_grid'])
+            if 'num_classes' in data:
+                self.num_classes = int(data['num_classes'])
+            if 'num_features' in data:
+                self.num_features = int(data['num_features'])
+            
+            print(f"HOGSoftmax model loaded successfully from {weight_path}")
+            return True
+            
+        except FileNotFoundError:
+            print(f"Error: File not found at {weight_path}")
+            return False
+        except Exception as e:
+            print(f"Error loading model: {e}")
+            return False

@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from models.softmax_regression import SoftmaxRegression
-
+import os
 class BlockSoftmax(SoftmaxRegression):
     def __init__(self, num_classes, grid_size=(7, 7), **kwargs):
         """
@@ -56,3 +56,105 @@ class BlockSoftmax(SoftmaxRegression):
     def predict(self, X: np.ndarray, use_best=True) -> int:
         X_block = self._transform(X)
         return super().predict(X_block, use_best=use_best)
+    
+    def predict_proba(self, X: np.ndarray, use_best=True):
+        X_block = self._transform(X)
+        return super().predict_proba(X_block, use_best=use_best)
+    
+    def get_feature_visualization(self, sample_image: np.ndarray) -> np.ndarray:
+        """
+        Visualize block-averaged image.
+        
+        Args:
+            sample_image (np.ndarray): Input image (28, 28) or (784,).
+            
+        Returns:
+            np.ndarray: Block-averaged image upsampled back to (28, 28).
+        """
+        # Reshape if needed
+        if sample_image.ndim == 1:
+            sample_image = sample_image.reshape(1, 28, 28)
+        elif sample_image.ndim == 2:
+            sample_image = sample_image.reshape(1, 28, 28)
+        
+        # Apply block averaging preprocessing
+        block_features = self._transform(sample_image).flatten()
+        
+        # Reshape to grid
+        block_grid = block_features.reshape(self.grid_size[0], self.grid_size[1])
+        
+        # Upsample back to 28x28 using repeat
+        block_h = 28 // self.grid_size[0]
+        block_w = 28 // self.grid_size[1]
+        
+        vis = np.repeat(np.repeat(block_grid, block_h, axis=0), block_w, axis=1)
+        
+        return vis[:28, :28]
+    
+    def save_best_model(self, model_path: str) -> bool:
+        """
+        Save BlockSoftmax model including grid_size parameter.
+        Saves: best_weights, grid_size
+        """
+        try:
+            if self.best_weights is None:
+                print("Error: No best weights to save.")
+                return False
+            
+            # Handle .npz extension
+            if not model_path.endswith('.npz'):
+                model_path = model_path.replace('.npy', '.npz')
+            
+            # Save all parameters
+            np.savez(
+                model_path,
+                best_weights=self.best_weights,
+                grid_size=np.array(self.grid_size),
+                num_classes=self.num_classes,
+                num_features=self.num_features
+            )
+            
+            print(f"BlockSoftmax model saved successfully to {model_path}")
+            return True
+            
+        except Exception as e:
+            print(f"Error saving model: {e}")
+            return False
+    
+    def load_weight(self, weight_path: str) -> bool:
+        """
+        Load BlockSoftmax model including grid_size parameter.
+        Loads: best_weights, grid_size
+        """
+        try:
+            # Handle file extension
+            import os
+            if not os.path.exists(weight_path):
+                if os.path.exists(weight_path + ".npz"):
+                    weight_path += ".npz"
+                elif os.path.exists(weight_path.replace('.npy', '.npz')):
+                    weight_path = weight_path.replace('.npy', '.npz')
+            
+            # Load file
+            data = np.load(weight_path)
+            
+            # Load all parameters
+            self.best_weights = data['best_weights']
+            self.weights = self.best_weights.copy()
+
+            if 'grid_size' in data:
+                self.grid_size = tuple(data['grid_size'])
+            if 'num_classes' in data:
+                self.num_classes = int(data['num_classes'])
+            if 'num_features' in data:
+                self.num_features = int(data['num_features'])
+            
+            print(f"BlockSoftmax model loaded successfully from {weight_path}")
+            return True
+            
+        except FileNotFoundError:
+            print(f"Error: File not found at {weight_path}")
+            return False
+        except Exception as e:
+            print(f"Error loading model: {e}")
+            return False

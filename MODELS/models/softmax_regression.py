@@ -43,6 +43,7 @@ class SoftmaxRegression:
             np.ndarray: Feature matrix with bias term, shape (n, m + 1).
         """
         ones = np.ones((X.shape[0], 1))
+        print(ones.shape, X.shape)
         return np.concatenate((ones, X), axis=1)
 
     def _softmax(self, z: np.ndarray) -> np.ndarray:
@@ -174,6 +175,7 @@ class SoftmaxRegression:
             np.ndarray: Predicted class indices.
         """
         z = np.dot(self.get_X_biased(X), self.best_weights if use_best else self.weights)
+        # print(z)
         y_pred = self._softmax(z)
         return y_pred.argmax(axis=1)
 
@@ -191,41 +193,92 @@ class SoftmaxRegression:
         z = np.dot(self.get_X_biased(X), self.best_weights if use_best else self.weights)
         return self._softmax(z)
     
+    def get_feature_visualization(self, sample_image: np.ndarray) -> np.ndarray:
+        """
+        Visualize preprocessed features for a sample image.
+        Base class simply normalizes and reshapes the image.
+        Subclasses should override to show their specific preprocessing.
+        
+        Args:
+            sample_image (np.ndarray): Input image (28, 28) or (784,) or (1, 784).
+            
+        Returns:
+            np.ndarray: Preprocessed features as (28, 28) image for visualization.
+        """
+        # Reshape if flattened
+        if sample_image.ndim == 1:
+            sample_image = sample_image.reshape(28, 28)
+        elif sample_image.ndim == 3:
+            sample_image = sample_image.reshape(28, 28)
+        
+        # Normalize to [0, 1]
+        img = sample_image.astype(np.float32)
+        if img.max() > 1.0:
+            img = img / 255.0
+        
+        return img
+    
     def save_best_model(self, model_path: str) -> bool:
         """
-        Save (best_weights) into file .npy
+        Save model to .npz file (supports multiple parameters).
+        Base SoftmaxRegression only saves best_weights.
+        Subclasses should override to save additional parameters.
         """
         try:
             if self.best_weights is None:
                 print("Error: No best weights to save.")
                 return False
-            np.save(model_path, self.best_weights)
+            
+            # Handle .npz extension
+            if not model_path.endswith('.npz'):
+                model_path = model_path.replace('.npy', '.npz')
+            
+            # Save to npz with num_classes and num_features
+            np.savez(
+                model_path, 
+                best_weights=self.best_weights,
+                num_classes=self.num_classes,
+                num_features=self.num_features
+            )
             
             print(f"Model saved successfully to {model_path}")
             return True
             
         except Exception as e:
-            # Bắt mọi lỗi (I/O, permission, v.v.)
             print(f"Error saving model: {e}")
             return False
 
     def load_weight(self, weight_path: str) -> bool:
         """
-        Đọc trọng số từ file .npy và gán vào model hiện tại
+        Load model from .npz file.
+        Base SoftmaxRegression only loads best_weights.
+        Subclasses should override to load additional parameters.
         """
         try:
-            # Xử lý trường hợp người dùng quên điền đuôi .npy
-            if not os.path.exists(weight_path) and os.path.exists(weight_path + ".npy"):
-                weight_path += ".npy"
+            # Handle file extension
+            if not os.path.exists(weight_path):
+                if os.path.exists(weight_path + ".npz"):
+                    weight_path += ".npz"
+                elif os.path.exists(weight_path.replace('.npy', '.npz')):
+                    weight_path = weight_path.replace('.npy', '.npz')
             
             # Load file
-            weights = np.load(weight_path)
+            data = np.load(weight_path)
             
-            # Gán trọng số vừa load vào biến trọng số chính của class (self.W)
-            self.W = weights
-            
-            # (Tùy chọn) Cập nhật luôn best_weights để đồng bộ
-            self.best_weights = weights
+            # Load best_weights
+            if 'best_weights' in data:
+                self.best_weights = data['best_weights']
+                self.weights = self.best_weights.copy()
+                
+                # Load num_classes and num_features if available
+                if 'num_classes' in data:
+                    self.num_classes = int(data['num_classes'])
+                if 'num_features' in data:
+                    self.num_features = int(data['num_features'])
+            else:
+                # Fallback for old .npy files
+                self.best_weights = data['arr_0'] if 'arr_0' in data else data
+                self.weights = self.best_weights.copy()
             
             print(f"Weights loaded successfully from {weight_path}")
             return True
@@ -268,8 +321,44 @@ class SoftmaxRegression:
         dw = X_biased.T @ dz / N
         # Update weights by gradient descent
         self.weights -= learning_rate * dw
+    
+    def get_feature_visualization(self, class_idx: int, use_best: bool = True) -> np.ndarray:
+        """
+        Get visualization of learned features for a specific class.
+        Returns weights reshaped to 28x28 for visualization.
+        
+        Args:
+            class_idx (int): Class index to visualize (0-9 for MNIST).
+            use_best (bool): Whether to use best weights.
+            
+        Returns:
+            np.ndarray: Feature weights shaped as (28, 28) for visualization.
+        """
+        weights = self.best_weights if use_best else self.weights
+        if weights is None:
+            raise ValueError("Model has not been trained yet")
+        
+        # Get weights for the specified class (excluding bias term)
+        class_weights = weights[1:, class_idx]
+        
+        # Reshape to 28x28 for MNIST
+        img_size = int(np.sqrt(self.num_features))
+        return class_weights.reshape(img_size, img_size)
         
         # Evaluate loss and accuracy during training
         loss = self._cross_entropy_loss(y_target, y_pred)
         
         return loss
+
+    def predict_with_feature(self, X: np.ndarray, use_best=True):
+        """
+        Predict class labels, probability for the given input data. And return its feature visualization
+
+        Args:
+            X (np.ndarray): Input feature matrix.
+            use_best (bool): Whether to use the best weights. Defaults to True.
+
+        Returns:
+            (np.ndarray, np.ndarray, any): Predicted class indices.
+        """
+        return self.predict(X, use_best), self.predict_proba(X, use_best), None

@@ -24,8 +24,7 @@ class PixelSoftmax(SoftmaxRegression):
         mean = np.mean(X, axis=0)
         std = np.std(X, axis=0)
         
-        return (X - mean) / (std + epsilon)
-
+        return np.asarray(X / 255.0, dtype=np.float32)
     def fit(self, X: np.ndarray, y: np.ndarray, verbose=True, learning_rate=0.0001, epochs=100):
         """
         Train the Pixel-based model.
@@ -67,3 +66,33 @@ class PixelSoftmax(SoftmaxRegression):
         """
         X_proc = self._flatten_normalize(X)
         return super().predict_proba(X_proc, use_best=use_best)
+    
+    def get_feature_visualization(self, sample_image: np.ndarray) -> np.ndarray:
+        """
+        Visualize normalized pixel values.
+        
+        Args:
+            sample_image (np.ndarray): Input image (28, 28) or (784,).
+            
+        Returns:
+            np.ndarray: Normalized image (28, 28).
+        """
+        # Reshape if needed
+        if sample_image.ndim == 1:
+            sample_image = sample_image.reshape(1, -1)
+        elif sample_image.ndim == 2 and sample_image.shape[0] != 1:
+            sample_image = sample_image.reshape(1, -1)
+        
+        # Apply preprocessing (flatten and normalize)
+        processed = self._flatten_normalize(sample_image)
+        
+        # Reshape back to 28x28
+        return processed.reshape(28, 28)
+    
+    def save_best_model(self, model_path: str) -> bool:
+        """Save PixelSoftmax model (only needs weights)."""
+        return super().save_best_model(model_path)
+    
+    def load_weight(self, weight_path: str) -> bool:
+        """Load PixelSoftmax model (only needs weights)."""
+        return super().load_weight(weight_path)

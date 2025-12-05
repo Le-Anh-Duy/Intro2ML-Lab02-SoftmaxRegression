@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MNIST Digit Recognition - Multi-Model</title>
+    <link rel="stylesheet" href="app.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔢 MNIST Digit Recognition</h1>
+            <p>Draw a digit (0-9) and compare predictions across multiple feature extraction methods</p>
+        </header>
+
+        <main>
+            <!-- Drawing Section -->
+            <div class="canvas-section">
+                <h2>Drawing Canvas</h2>
+                <div class="canvas-container">
+                    <canvas id="canvas" width="280" height="280"></canvas>
+                </div>
+                <div class="controls">
+                    <button id="clearBtn" class="btn btn-secondary">🗑️ Clear Canvas</button>
+                    <button id="predictBtn" class="btn btn-primary">🎯 Predict Digit</button>
+                </div>
+                <div class="model-selector">
+                    <label for="modelSelect">Select Model:</label>
+                    <select id="modelSelect" class="model-dropdown">
+                        <option value="all">All Models</option>
+                    </select>
+                </div>
+                <div id="preprocessedSection" class="preprocessed-section hidden">
+                    <h3>Preprocessed Image (28x28)</h3>
+                    <p class="preprocessed-caption">This is what the model actually sees</p>
+                    <img id="preprocessedImage" src="" alt="Preprocessed 28x28" class="preprocessed-img">
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <div class="results-section">
+                <h2>Predictions & Feature Visualizations</h2>
+                <div id="loadingIndicator" class="loading hidden">
+                    <div class="spinner"></div>
+                    <p>Processing predictions...</p>
+                </div>
+                <div id="results" class="results-grid"></div>
+                <div id="noResults" class="no-results hidden">
+                    <p>Draw a digit and click "Predict Digit" to see results</p>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <div class="model-info">
+                <h3>Feature Extraction Methods:</h3>
+                <ul>
+                    <li><strong>Pixel:</strong> Raw pixel intensity</li>
+                    <li><strong>Edge:</strong> Sobel edge detection</li>
+                    <li><strong>Block:</strong> Block averaging (7x7 grid)</li>
+                    <li><strong>HOG:</strong> Histogram of Oriented Gradients</li>
+                    <li><strong>PCA:</strong> Principal Component Analysis (50 components)</li>
+                </ul>
+            </div>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
