@@ -24,7 +24,7 @@ class PixelSoftmax(SoftmaxRegression):
         mean = np.mean(X, axis=0)
         std = np.std(X, axis=0)
         
-        return (X - mean) / (std + epsilon)
+        return np.asarray(X / 255.0, dtype = np.float32)
 
     def fit(self, X: np.ndarray, y: np.ndarray, *args, **kwargs):
         """

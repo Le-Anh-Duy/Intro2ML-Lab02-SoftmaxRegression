@@ -91,7 +91,7 @@ def preprocess_canvas_image(base64_image):
     image = Image.eval(image, lambda x: x)
     image = image.resize((28, 28), Image.Resampling.LANCZOS)
     image_array = np.array(image, dtype=np.float32)
-    print(image_array.reshape(1, 28, 28))
+    # print(image_array.reshape(1, 28, 28))
     return image_array.reshape(1, 28, 28)
 
 @app.route('/api/models', methods=['GET'])

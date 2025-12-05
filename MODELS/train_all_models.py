@@ -44,7 +44,7 @@ models_config = [
     {
         'name': 'hog',
         'class': HOGSoftmax,
-        'params': {'num_classes': 10, 'bins': 9, 'cell_grid': (4, 4)},
+        'params': {'num_classes': 10, 'bins': 9, 'cell_grid': (7, 7)},
         'train_params': {'learning_rate': 0.1, 'epochs': 100}
     },
     {
