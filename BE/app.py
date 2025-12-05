@@ -88,10 +88,27 @@ def preprocess_canvas_image(base64_image):
     image_data = base64.b64decode(base64_image)
     image = Image.open(BytesIO(image_data))
     image = image.convert('L')
-    image = Image.eval(image, lambda x: x)
-    image = image.resize((28, 28), Image.Resampling.LANCZOS)
-    image_array = np.array(image, dtype=np.float32)
-    # print(image_array.reshape(1, 28, 28))
+
+
+    # 1. Lấy bounding box của vùng vẽ (cắt bỏ viền đen thừa)
+    # Đảo ngược màu để tìm vùng có mực (vì getbbox tìm vùng khác 0)
+    # Giả sử vẽ trắng trên đen
+    coords = image.getbbox() 
+    if coords:
+        image = image.crop(coords)
+    
+    # 2. Resize về 20x20 (để chừa lề) thay vì 28x28 ngay
+    image.thumbnail((20, 20), Image.Resampling.LANCZOS)
+    
+    # 3. Dán vào giữa nền đen 28x28 (Center padding)
+    new_image = Image.new('L', (28, 28), 0) # 0 là màu đen
+    
+    # Tính toán vị trí để paste vào giữa
+    paste_x = (28 - image.width) // 2
+    paste_y = (28 - image.height) // 2
+    new_image.paste(image, (paste_x, paste_y))
+    
+    image_array = np.array(new_image, dtype=np.float32)
     return image_array.reshape(1, 28, 28)
 
 @app.route('/api/models', methods=['GET'])

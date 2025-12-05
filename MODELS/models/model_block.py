@@ -44,7 +44,7 @@ class BlockSoftmax(SoftmaxRegression):
         # Lúc này X_blocked có shape (N, 7, 7)
         
         # 4. Duỗi phẳng thành vector feature (N, 49)
-        return X_blocked.reshape(N, -1)
+        return np.asarray(X_blocked.reshape(N, -1), dtype = np.float32) / 255.0 
 
     def fit(self, X: np.ndarray, y: np.ndarray, *args, **kwargs):
         print(f"Applying Block Averaging {self.grid_size}...")
