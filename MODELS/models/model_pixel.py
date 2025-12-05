@@ -24,14 +24,9 @@ class PixelSoftmax(SoftmaxRegression):
         mean = np.mean(X, axis=0)
         std = np.std(X, axis=0)
         
-<<<<<<< HEAD
-        return np.asarray(X / 255.0, dtype=np.float32)
-    def fit(self, X: np.ndarray, y: np.ndarray, verbose=True, learning_rate=0.0001, epochs=100):
-=======
         return (X - mean) / (std + epsilon)
 
     def fit(self, X: np.ndarray, y: np.ndarray, *args, **kwargs):
->>>>>>> 98d0b6cd176ed929b222d990889800619de7de57
         """
         Train the Pixel-based model.
 
