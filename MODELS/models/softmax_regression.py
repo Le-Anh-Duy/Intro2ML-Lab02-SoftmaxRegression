@@ -182,7 +182,7 @@ class SoftmaxRegression:
                 if X_val is not None and y_val is not None:
                     val_pred = self.predict(X_val)
                     val_acc = np.sum(val_pred == y_val) / y_val.size
-                    
+                    self.acc_history.append(val_acc)
                     # LƯU Ý QUAN TRỌNG:
                     # Dùng progress.console.print thay vì print thường
                     # để in log lên trên thanh progress bar mà không làm vỡ giao diện
