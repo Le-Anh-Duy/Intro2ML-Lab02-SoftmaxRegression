@@ -45,7 +45,6 @@ class SoftmaxRegression:
             np.ndarray: Feature matrix with bias term, shape (n, m + 1).
         """
         ones = np.ones((X.shape[0], 1))
-        print(ones.shape, X.shape)
         return np.concatenate((ones, X), axis=1)
 
     def _softmax(self, z: np.ndarray) -> np.ndarray:
@@ -126,64 +125,68 @@ class SoftmaxRegression:
             # Trả về dữ liệu tương ứng với chỉ mục đó
             yield X[batch_indices], y[batch_indices]
 
-    def fit(self, X: np.ndarray, y: np.ndarray, verbose=True, batch_size=64, learning_rate=0.01, epochs=100, resume = False):
+    def fit(self, X: np.ndarray, y: np.ndarray, X_val: np.ndarray = None, y_val: np.ndarray = None, verbose=True, batch_size=64, learning_rate=0.01, epochs=100, resume = False):
         """
         Train the model using Gradient Descent.
-
-        Args:
-            X (np.ndarray): Training features of shape (n, m).
-            y (np.ndarray): Training labels of shape (n,).
-            verbose (bool): Whether to display the progress bar. Defaults to True.
-            epochs (int): Number of training iterations. Defaults to 100.
         """
         self._initialize_weights(resume)
         self._min_loss = 2e9
 
-		# Integrate bias to X to remove bias during calculating
+        # Integrate bias to X to remove bias during calculating
         X_biased = self.get_X_biased(X)
-
         y_target = self._one_hot_encode(y)
+        
+        # Tính số lượng batch (steps) cho mỗi epoch
+        total_steps = (X_biased.shape[0] + batch_size - 1) // batch_size
 
-        for i in range(epochs):
-            with Progress(
-                TextColumn("[bold blue]{task.description}"),
-                BarColumn(),
-                TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
-                TimeRemainingColumn(),
-                TextColumn("{task.fields[metrics]}"),
-                disable=(not verbose)
-            ) as progress:
-                task = progress.add_task(
-                    f"Epoch {i+1}/{epochs}", 
-                    total=(X_biased.shape[0] + batch_size - 1) // batch_size,
-                    metrics="loss: --  acc: --"
-                )
+        # 1. Khởi tạo Progress Context ra ngoài vòng lặp epochs
+        with Progress(
+            TextColumn("[bold blue]{task.description}"),
+            BarColumn(),
+            TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+            TimeRemainingColumn(),
+            TextColumn("{task.fields[metrics]}"),
+            disable=(not verbose)
+        ) as progress:
+            
+            # Tạo task lần đầu tiên
+            task = progress.add_task(f"Epoch 0/{epochs}", total=total_steps, metrics="loss: --")
+
+            for i in range(epochs):
+                # 2. Reset lại task ở đầu mỗi epoch
+                # Đưa 'completed' về 0, cập nhật tiêu đề Epoch mới
+                progress.reset(task, description=f"Epoch {i+1}/{epochs}", total=total_steps, metrics="loss: --")
+
                 for X_batch, y_batch in self._generate_batches(X_biased, y_target, batch_size):
                     N = X_batch.shape[0]
-                    # Compute the score vector
-                    z = X_batch @ self.weights
-                    # Convert the score vector to distribution vector
-                    y_pred = self._softmax(z)
-
-                    # Compute the derivative of z
-                    dz = y_pred - y_batch
-
-                    # Compute the gradient
-                    dw = X_batch.T @ dz / N
-
-                    # Update weights by gradient descent
-                    self.weights = self.optimizer.apply(self.weights, dw, learning_rate)
                     
-                    # Evaluate loss and accuracy during training
+                    # --- Training Logic ---
+                    z = X_batch @ self.weights
+                    y_pred = self._softmax(z)
+                    dz = y_pred - y_batch
+                    dw = X_batch.T @ dz / N
+                    self.weights = self.optimizer.apply(self.weights, dw, learning_rate)
                     loss = self._cross_entropy_loss(y_batch, y_pred)
-                    self.loss_history.append(loss)
 
-                    # Save best weights
                     if loss < self._min_loss:
                         self._min_loss = loss
                         self.best_weights = self.weights.copy()
+                    # -----------------------
 
+                    # Cập nhật tiến trình từng bước (advance=1)
                     progress.update(task, advance=1, metrics=f"loss: {loss:.4f}")
+                
+                # End of epoch logic
+                self.loss_history.append(loss)
+
+                if X_val is not None and y_val is not None:
+                    val_pred = self.predict(X_val)
+                    val_acc = np.sum(val_pred == y_val) / y_val.size
+                    
+                    # LƯU Ý QUAN TRỌNG:
+                    # Dùng progress.console.print thay vì print thường
+                    # để in log lên trên thanh progress bar mà không làm vỡ giao diện
+                    progress.console.print(f"Epoch {i+1}/{epochs} - Validation Accuracy: {val_acc*100:.2f}%")
 
     def predict(self, X: np.ndarray, use_best=True) -> int:
         """
