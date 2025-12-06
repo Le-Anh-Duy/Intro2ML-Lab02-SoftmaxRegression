@@ -69,7 +69,7 @@ class PCASoftmax(SoftmaxRegression):
         # 5. Lấy K vector đầu tiên
         self.components = sorted_eigenvectors[:, :self.n_components]
 
-    def fit(self, X: np.ndarray, y: np.ndarray, *args, **kwargs):
+    def fit(self, X: np.ndarray, y: np.ndarray, X_val: np.ndarray = None, y_val: np.ndarray = None, *args, **kwargs):
         """
         Train the Pixel-based model.
 
@@ -84,8 +84,9 @@ class PCASoftmax(SoftmaxRegression):
         X_proc = self._flatten_normalize(X)
         self._PCA_fit(X_proc)
         X_train = self._transform(X_proc)
+        X_val_transformed = self._transform(self._flatten_normalize(X_val)) if X_val is not None else None
 
-        super().fit(X_train, y, *args, **kwargs)
+        super().fit(X_train, y, X_val=X_val_transformed, y_val=y_val, *args, **kwargs)
 
     def predict(self, X: np.ndarray, use_best=True) -> int:
         """

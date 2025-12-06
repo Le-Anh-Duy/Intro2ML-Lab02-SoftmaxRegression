@@ -46,12 +46,14 @@ class BlockSoftmax(SoftmaxRegression):
         # 4. Duỗi phẳng thành vector feature (N, 49)
         return np.asarray(X_blocked.reshape(N, -1), dtype = np.float32) / 255.0 
 
-    def fit(self, X: np.ndarray, y: np.ndarray, *args, **kwargs):
+    def fit(self, X: np.ndarray, y: np.ndarray, X_val: np.ndarray = None, y_val: np.ndarray = None, *args, **kwargs):
         print(f"Applying Block Averaging {self.grid_size}...")
         X_block = self._transform(X)
         print(f"Block Feature shape: {X_block.shape}") # Ví dụ: (60000, 49)
         
-        super().fit(X_block, y, *args, **kwargs)
+        X_val_block = self._transform(X_val) if X_val is not None else None
+
+        super().fit(X_block, y, X_val=X_val_block, y_val=y_val, *args, **kwargs)
 
     def predict(self, X: np.ndarray, use_best=True) -> int:
         X_block = self._transform(X)

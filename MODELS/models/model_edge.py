@@ -49,15 +49,16 @@ class EdgeSoftmax(SoftmaxRegression):
         
         return np.asarray(X_edge / 255.0)
 
-    def fit(self, X: np.ndarray, y: np.ndarray, *args, **kwargs):
+    def fit(self, X: np.ndarray, y: np.ndarray, X_val: np.ndarray = None, y_val: np.ndarray = None, *args, **kwargs):
         """
         Train the Edge-based model.
         """
         print("Feature Extraction: Computing Sobel Edges...")
             
         X_proc = self._extract_sobel_normalize(X)
+        X_val_proc = self._extract_sobel_normalize(X_val) if X_val is not None else None
         
-        super().fit(X_proc, y, *args, **kwargs)
+        super().fit(X_proc, y, X_val=X_val_proc, y_val=y_val, *args, **kwargs)
 
     def predict(self, X: np.ndarray, use_best=True) -> int:
         """

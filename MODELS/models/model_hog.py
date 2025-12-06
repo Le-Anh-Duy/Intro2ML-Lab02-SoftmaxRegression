@@ -76,12 +76,14 @@ class HOGSoftmax(SoftmaxRegression):
         norm = np.linalg.norm(hog_features, axis=1, keepdims=True)
         return hog_features / (norm + 1e-6)
 
-    def fit(self, X: np.ndarray, y: np.ndarray, *args, **kwargs):
+    def fit(self, X: np.ndarray, y: np.ndarray, X_val: np.ndarray = None, y_val: np.ndarray = None, *args, **kwargs):
         print("Extracting HOG features...")
         X_hog = self._transform(X)
         print(f"HOG Feature shape: {X_hog.shape}") # Ví dụ: (60000, 144)
         
-        super().fit(X_hog, y, *args, **kwargs)
+        X_val_hog = self._transform(X_val) if X_val is not None else None
+
+        super().fit(X_hog, y, X_val=X_val_hog, y_val=y_val, *args, **kwargs)
 
     def predict(self, X: np.ndarray, use_best=True) -> int:
         X_hog = self._transform(X)

@@ -26,7 +26,7 @@ class PixelSoftmax(SoftmaxRegression):
         
         return np.asarray(X / 255.0, dtype = np.float32)
 
-    def fit(self, X: np.ndarray, y: np.ndarray, *args, **kwargs):
+    def fit(self, X: np.ndarray, y: np.ndarray, X_val: np.ndarray = None, y_val: np.ndarray = None, *args, **kwargs):
         """
         Train the Pixel-based model.
 
@@ -39,8 +39,9 @@ class PixelSoftmax(SoftmaxRegression):
             epochs (int): Number of training iterations.
         """
         X_proc = self._flatten_normalize(X)
+        X_val_proc = self._flatten_normalize(X_val) if X_val is not None else None
         
-        super().fit(X_proc, y, *args, **kwargs)
+        super().fit(X_proc, y, X_val=X_val_proc, y_val=y_val, *args, **kwargs)
 
     def predict(self, X: np.ndarray, use_best=True) -> int:
         """
