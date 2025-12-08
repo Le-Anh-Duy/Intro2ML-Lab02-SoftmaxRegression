@@ -18,72 +18,89 @@ class HOGSoftmax(SoftmaxRegression):
         self.bins = bins
         self.cell_grid = cell_grid
 
-    def _compute_hog_single(self, img):
+    def _compute_gradients(self, X_float: np.ndarray):
         """
-        Tính HOG cho 1 ảnh (28x28)
+        [Util] Tính Magnitude và Angle cho cả batch ảnh.
+        Input: (N, H, W)
+        Output: mags, angs (N, H, W)
         """
-        # 1. Tính Gradient theo X và Y dùng Sobel
-        gx = cv2.Sobel(img, cv2.CV_32F, 1, 0, ksize=1)
-        gy = cv2.Sobel(img, cv2.CV_32F, 0, 1, ksize=1)
+        N, H, W = X_float.shape
+        mags = np.zeros((N, H, W), dtype=np.float32)
+        angs = np.zeros((N, H, W), dtype=np.float32)
+
+        for i in range(N):
+            gx = cv2.Sobel(X_float[i], cv2.CV_32F, 1, 0, ksize=1)
+            gy = cv2.Sobel(X_float[i], cv2.CV_32F, 0, 1, ksize=1)
+            m, a = cv2.cartToPolar(gx, gy, angleInDegrees=True)
+            mags[i] = m
+            angs[i] = a % 180
+            
+        return mags, angs
+
+    def _vectorized_binning(self, mags: np.ndarray, angs: np.ndarray):
+        """
+        [Util] Chia cell và tính Histogram bằng ma trận (Vectorization).
+        Đây là phần phức tạp nhất được tách ra.
+        """
+        N, H, W = mags.shape
+        gh, gw = self.cell_grid
+        ch = H // gh
+        cw = W // gw
         
-        # 2. Chuyển sang Magnitude (độ lớn) và Angle (góc)
-        # angle trả về từ 0 đến 360 độ
-        mag, angle = cv2.cartToPolar(gx, gy, angleInDegrees=True)
+        # 1. Cắt ảnh cho vừa khớp lưới (nếu kích thước không chia hết)
+        mags = mags[:, :gh*ch, :gw*cw]
+        angs = angs[:, :gh*ch, :gw*cw]
         
-        # Chỉ quan tâm hướng vô hướng (0-180 độ), ví dụ nét lên hay nét xuống coi như nhau
-        angle = angle % 180 
+        # 2. Reshape & Transpose để gom pixel về các cell
+        # (N, grid_h, cell_h, grid_w, cell_w) -> (N, grid_h, grid_w, cell_h, cell_w)
+        mags_cells = mags.reshape(N, gh, ch, gw, cw).transpose(0, 1, 3, 2, 4)
+        angs_cells = angs.reshape(N, gh, ch, gw, cw).transpose(0, 1, 3, 2, 4)
         
-        # 3. Chia ảnh thành các cell và tính histogram
-        h, w = img.shape
-        cell_h = h // self.cell_grid[0]
-        cell_w = w // self.cell_grid[1]
+        # 3. Tính bin cho từng pixel
+        bin_width = 180 / self.bins
+        bin_indices = (angs_cells / bin_width).astype(int) % self.bins
         
-        hog_vector = []
+        # 4. Dùng broadcasting để thay vòng lặp pixel
+        hog_cells = np.zeros((N, gh, gw, self.bins), dtype=np.float32)
         
-        for i in range(self.cell_grid[0]):
-            for j in range(self.cell_grid[1]):
-                # Cắt vùng cell tương ứng
-                cell_mag = mag[i*cell_h : (i+1)*cell_h, j*cell_w : (j+1)*cell_w]
-                cell_ang = angle[i*cell_h : (i+1)*cell_h, j*cell_w : (j+1)*cell_w]
-                
-                # Tính histogram cho cell này
-                # range=(0, 180) nghĩa là chia góc từ 0-180 thành 'bins' phần
-                # weights=cell_mag nghĩa là pixel nào nét đậm thì phiếu bầu giá trị cao hơn
-                hist, _ = np.histogram(cell_ang, bins=self.bins, range=(0, 180), weights=cell_mag)
-                
-                hog_vector.extend(hist)
-                
-        return np.array(hog_vector)
+        for b in range(self.bins):
+            # Mask cho bin hiện tại
+            mask = (bin_indices == b)
+            # Cộng dồn magnitude
+            hog_cells[:, :, :, b] = np.sum(mags_cells * mask, axis=(3, 4))
+            
+        return hog_cells
 
     def _transform(self, X: np.ndarray) -> np.ndarray:
         """
-        Chuyển đổi cả batch ảnh X (N, 784) sang HOG features (N, features)
+        Chuyển đổi batch ảnh X sang đặc trưng HOG.
         """
-        # Reshape lại thành ảnh (N, 28, 28) nếu đang bị flatten
+        # 1. Chuẩn bị dữ liệu
         if X.ndim == 2:
             X = X.reshape(-1, 28, 28)
+        
+        X_float = X.astype(np.float32)
+        N = X.shape[0]
+        
+        # 2. Tính Gradient
+        mags, angs = self._compute_gradients(X_float)
+
+        # 3. Tính Histogram (Binning)
+        hog_cells = self._vectorized_binning(mags, angs)
             
-        hog_features = []
-        # Lưu ý: Vòng lặp này hơi chậm, nhưng dễ hiểu và code thủ công.
-        # Với N=60000 có thể mất khoảng 30s-1p để pre-process.
-        for img in X:
-            # Ảnh MNIST gốc là float hoặc uint8, cần đảm bảo format đúng cho cv2
-            img_float = img.astype(np.float32)
-            hog_features.append(self._compute_hog_single(img_float))
-            
-        # Chuẩn hóa L2 cho toàn bộ vector feature (giúp chống lại thay đổi độ sáng)
-        hog_features = np.array(hog_features)
+        # 4. Flatten và Normalize L2
+        hog_features = hog_cells.reshape(N, -1)
         norm = np.linalg.norm(hog_features, axis=1, keepdims=True)
+        
         return hog_features / (norm + 1e-6)
 
     def fit(self, X: np.ndarray, y: np.ndarray, X_val: np.ndarray = None, y_val: np.ndarray = None, *args, **kwargs):
-        print("Extracting HOG features...")
+        print("Extracting HOG features (Vectorized Refactored)...")
+        # Transform tập Train
         X_hog = self._transform(X)
-        print(f"HOG Feature shape: {X_hog.shape}") # Ví dụ: (60000, 144)
+        print(f"HOG Feature shape: {X_hog.shape}")
         
-        X_val_hog = self._transform(X_val) if X_val is not None else None
-
-        super().fit(X_hog, y, X_val=X_val_hog, y_val=y_val, *args, **kwargs)
+        super().fit(X_hog, y, X_val=X_val, y_val=y_val, *args, **kwargs)
 
     def predict(self, X: np.ndarray, use_best=True) -> int:
         X_hog = self._transform(X)

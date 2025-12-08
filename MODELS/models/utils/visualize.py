@@ -125,15 +125,15 @@ def visualize_block_features(model, X_sample):
     """
     So sánh ảnh gốc và ảnh sau khi qua Block Averaging
     """
-    # Lấy 1 ảnh mẫu
+    # Lấy 1 ảnh mẫu và reshape về 28x28
     img_original = X_sample.reshape(28, 28)
     
-    # Tính feature
-    # Lưu ý: hàm _transform nhận vào batch (N, ...), nên cần bọc X_sample vào list
-    # Kết quả trả về (1, 49)
-    feature_vector = model._transform(X_sample[np.newaxis, :])
+    # Tính feature (cần thêm axis để tạo batch N=1)
+    # model._transform trả về (1, num_features)
+    feature_vector = model._transform(img_original[np.newaxis, :, :])
     
-    # Reshape lại thành lưới (7x7) để vẽ
+    # Reshape lại thành lưới (ví dụ 7x7) để vẽ
+    # model.grid_size là tuple (7, 7)
     img_blocked = feature_vector.reshape(model.grid_size)
     
     # Vẽ
@@ -141,13 +141,13 @@ def visualize_block_features(model, X_sample):
     
     # Ảnh gốc
     axes[0].imshow(img_original, cmap='gray')
-    axes[0].set_title(f"Original (28x28)\n784 pixels")
+    axes[0].set_title(f"Original (28x28)")
     axes[0].axis('off')
     
     # Ảnh Features (Block)
-    # Dùng nội suy 'nearest' để nhìn rõ các ô vuông
+    # Dùng interpolation='nearest' để thấy rõ các ô vuông (pixel to)
     axes[1].imshow(img_blocked, cmap='gray', interpolation='nearest')
-    axes[1].set_title(f"Block Features {model.grid_size}\n{model.num_block_features} features")
+    axes[1].set_title(f"Block Features {model.grid_size}")
     axes[1].axis('off')
     
     plt.tight_layout()
@@ -158,35 +158,43 @@ def visualize_block_features(model, X_sample):
 # model.fit(X_train, y_train)
 # visualize_block_features(model, X_train[0])
 
-import matplotlib.pyplot as plt
-
 def visualize_hog_features(model, X_sample):
     """
-    Visualize HOG của 1 ảnh mẫu
+    Visualize HOG của 1 ảnh mẫu: Ảnh gốc, Gradient Magnitude và Histogram
     """
-    # Lấy 1 ảnh mẫu
+    # Lấy 1 ảnh mẫu và ép kiểu float để tính toán
     img = X_sample.reshape(28, 28).astype(np.float32)
     
-    # Tính gradient lại để vẽ
+    # 1. Tính toán Gradient (chỉ để vẽ minh họa)
     gx = cv2.Sobel(img, cv2.CV_32F, 1, 0, ksize=1)
     gy = cv2.Sobel(img, cv2.CV_32F, 0, 1, ksize=1)
     mag, angle = cv2.cartToPolar(gx, gy, angleInDegrees=True)
     
-    # Vẽ
-    fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(12, 4))
+    # 2. Tính Feature Vector thực tế bằng hàm _transform của model
+    # Lưu ý: _transform yêu cầu input (N, H, W) nên cần thêm trục (np.newaxis)
+    # Kết quả trả về (1, num_features), cần flatten ra 1D để vẽ biểu đồ
+    hog_vec = model._transform(img[np.newaxis, :, :]).flatten()
     
+    # --- Vẽ đồ thị ---
+    fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(14, 4))
+    
+    # Ảnh gốc
     ax1.imshow(img, cmap='gray')
     ax1.set_title("Original Image")
+    ax1.axis('off')
     
-    # Vẽ độ lớn gradient (Magnitude) - Sẽ thấy biên của chữ số sáng lên
+    # Gradient Magnitude (Độ lớn biên cạnh)
     ax2.imshow(mag, cmap='hot')
-    ax2.set_title("Gradient Magnitude (Edges)")
+    ax2.set_title("Gradient Magnitude\n(Edges)")
+    ax2.axis('off')
     
-    # Vẽ Histogram (Feature vector)
-    hog_vec = model._compute_hog_single(img)
-    ax3.bar(range(len(hog_vec)), hog_vec)
-    ax3.set_title("HOG Feature Vector")
+    # Histogram Feature Vector
+    ax3.bar(range(len(hog_vec)), hog_vec, width=1.0)
+    ax3.set_title(f"HOG Feature Vector\n({len(hog_vec)} dimensions)")
+    ax3.set_xlabel("Feature Index")
+    ax3.set_ylabel("Normalized Strength")
     
+    plt.tight_layout()
     plt.show()
 
 # Cách dùng:

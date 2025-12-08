@@ -50,10 +50,7 @@ class BlockSoftmax(SoftmaxRegression):
         print(f"Applying Block Averaging {self.grid_size}...")
         X_block = self._transform(X)
         print(f"Block Feature shape: {X_block.shape}") # Ví dụ: (60000, 49)
-        
-        X_val_block = self._transform(X_val) if X_val is not None else None
-
-        super().fit(X_block, y, X_val=X_val_block, y_val=y_val, *args, **kwargs)
+        super().fit(X_block, y, X_val=X_val, y_val=y_val, *args, **kwargs)
 
     def predict(self, X: np.ndarray, use_best=True) -> int:
         X_block = self._transform(X)

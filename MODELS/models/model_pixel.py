@@ -39,9 +39,8 @@ class PixelSoftmax(SoftmaxRegression):
             epochs (int): Number of training iterations.
         """
         X_proc = self._flatten_normalize(X)
-        X_val_proc = self._flatten_normalize(X_val) if X_val is not None else None
-        
-        super().fit(X_proc, y, X_val=X_val_proc, y_val=y_val, *args, **kwargs)
+
+        super().fit(X_proc, y, X_val=X_val, y_val=y_val, *args, **kwargs)
 
     def predict(self, X: np.ndarray, use_best=True) -> int:
         """
