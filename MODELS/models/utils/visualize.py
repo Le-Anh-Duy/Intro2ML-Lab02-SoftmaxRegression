@@ -197,6 +197,91 @@ def visualize_hog_features(model, X_sample):
     plt.tight_layout()
     plt.show()
 
+import numpy as np
+import matplotlib.pyplot as plt
+import cv2
+
+def visualize_hog_features_order_by_angle(model, X_sample, n_bins=9, grid_size=(4,4)):
+    """
+    Visualize HOG chia thành n_bins hình ảnh riêng biệt.
+    Mỗi hình ảnh thể hiện độ mạnh của gradient theo hướng góc đó trên lưới (grid).
+    
+    Args:
+        model: Đối tượng model có hàm _transform
+        X_sample: Input ảnh (flatten hoặc 28x28)
+        n_bins: Số lượng bin góc (mặc định 9)
+        grid_size: Kích thước lưới chia ảnh (Height, Width) - tương ứng cells_per_block
+    """
+    # 1. Chuẩn bị ảnh gốc để vẽ minh họa
+    img = X_sample.reshape(28, 28).astype(np.float32)
+    
+    # 2. Tính Feature Vector từ model
+    # Giả sử output là (1, N) -> flatten thành (N,)
+    hog_vec = model._transform(img[np.newaxis, :, :]).flatten()
+    
+    # --- XỬ LÝ RESHAPE VECTOR ---
+    h_grid, w_grid = grid_size
+    expected_len = h_grid * w_grid * n_bins
+    
+    # Kiểm tra xem độ dài vector có khớp với cấu hình không
+    if len(hog_vec) != expected_len:
+        print(f"Cảnh báo: Độ dài vector ({len(hog_vec)}) không khớp với "
+              f"Grid {grid_size} x Bins {n_bins} = {expected_len}.")
+        return
+
+    # Reshape lại vector. 
+    # Giả định thứ tự dữ liệu là: Duyệt qua từng ô (Cell) -> Duyệt qua từng Bin
+    # Shape: (Height_Grid, Width_Grid, Num_Bins)
+    hog_cube = hog_vec.reshape(h_grid, w_grid, n_bins)
+
+    # --- VẼ ĐỒ THỊ ---
+    # Tạo Grid 3x3 cho 9 bins (hoặc tuỳ chỉnh nếu số bin khác 9)
+    rows = int(np.ceil(np.sqrt(n_bins)))
+    cols = int(np.ceil(n_bins / rows))
+    
+    fig = plt.figure(figsize=(12, 12))
+    
+    # Tiêu đề chung
+    plt.suptitle(f'HOG Features Intensity by Angle\n(Grid: {grid_size}, Bins: {n_bins})', fontsize=16)
+
+    # Vẽ từng Bin
+    for i in range(n_bins):
+        ax = fig.add_subplot(rows, cols, i + 1)
+        
+        # Lấy bản đồ đặc trưng của bin thứ i (Shape: 4x4)
+        feature_map = hog_cube[:, :, i]
+        
+        # Vẽ Heatmap
+        # interpolation='nearest' giúp nhìn rõ từng ô vuông của grid
+        im = ax.imshow(feature_map, cmap='hot', interpolation='nearest', vmin=0, vmax=np.max(hog_vec))
+        
+        # Tính góc đại diện (Giả sử 0-180 độ chia đều)
+        angle_deg = i * (180 / n_bins)
+        
+        ax.set_title(f"Bin {i}: ~{int(angle_deg)}°")
+        ax.set_xticks([])
+        ax.set_yticks([])
+        
+        # Thêm colorbar nhỏ để tham chiếu độ lớn
+        plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+
+    plt.tight_layout(rect=[0, 0.03, 1, 0.95]) # Chừa chỗ cho suptitle
+    plt.show()
+
+    # (Tuỳ chọn) Vẽ thêm ảnh gốc để dễ đối chiếu
+    plt.figure(figsize=(3,3))
+    plt.imshow(img, cmap='gray')
+    plt.title("Original Image")
+    plt.axis('off')
+    plt.show()
+
+# --- HƯỚNG DẪN SỬ DỤNG ---
+# Giả sử bạn đã khởi tạo model và load data
+# model = HOGSoftmax(...) 
+# X_sample = X_train[123]
+
+# visualize_hog_features_order_by_angle(model, X_sample, n_bins=9, grid_size=(4,4))
+
 # Cách dùng:
 # model = HOGSoftmax(num_classes=10)
 # visualize_hog_features(model, X_train[0])
