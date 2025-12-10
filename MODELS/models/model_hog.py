@@ -24,17 +24,21 @@ class HOGSoftmax(SoftmaxRegression):
         Input: (N, H, W)
         Output: mags, angs (N, H, W)
         """
-        N, H, W = X_float.shape
-        mags = np.zeros((N, H, W), dtype=np.float32)
-        angs = np.zeros((N, H, W), dtype=np.float32)
-
-        for i in range(N):
-            gx = cv2.Sobel(X_float[i], cv2.CV_32F, 1, 0, ksize=1)
-            gy = cv2.Sobel(X_float[i], cv2.CV_32F, 0, 1, ksize=1)
-            m, a = cv2.cartToPolar(gx, gy, angleInDegrees=True)
-            mags[i] = m
-            angs[i] = a % 180
-            
+        # 1. Tính Gradient theo phương X (gx)
+        # gx[i] = pixel[i+1] - pixel[i-1] (Central Difference)
+        gx = np.zeros_like(X_float)
+        gx[:, :, 1:-1] = X_float[:, :, 2:] - X_float[:, :, :-2]
+        
+        # 2. Tính Gradient theo phương Y (gy)
+        gy = np.zeros_like(X_float)
+        gy[:, 1:-1, :] = X_float[:, 2:, :] - X_float[:, :-2, :]
+        
+        # 3. Tính Magnitude và Angle
+        mags = np.sqrt(gx**2 + gy**2)
+        
+        angs = np.arctan2(gy, gx) * (180 / np.pi)
+        angs[angs < 0] += 180
+        
         return mags, angs
 
     def _vectorized_binning(self, mags: np.ndarray, angs: np.ndarray):

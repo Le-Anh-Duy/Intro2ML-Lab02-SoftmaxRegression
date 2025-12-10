@@ -1,6 +1,7 @@
 import numpy as np
 from models.softmax_regression import SoftmaxRegression
 import os
+import matplotlib.pyplot as plt
 class PCASoftmax(SoftmaxRegression):
     def __init__(self, num_features, num_classes, *args, **kwargs):
         super().__init__(num_features, num_classes, *args, **kwargs)
@@ -227,3 +228,51 @@ class PCASoftmax(SoftmaxRegression):
         except Exception as e:
             print(f"Error loading model: {e}")
             return False
+        
+
+def check_pca_variance(X):
+    """
+    Calculate and plot the cumulative explained variance
+    """
+
+    if X.ndim == 3:
+        X = X.reshape(X.shape[0], -1)
+    if np.max(X) > 1.0:
+        X = X.astype(np.float32) / 255.0
+    
+    X_mean = np.mean(X, axis=0)
+    X_centered = X - X_mean
+    cov_matrix = np.cov(X_centered, rowvar=False)
+    eigenvalues, _ = np.linalg.eigh(cov_matrix)
+    sorted_eigenvalues = eigenvalues[::-1]
+    
+    # Cumulative explained variance
+    total_variance = np.sum(sorted_eigenvalues)
+    explained_variance_ratio = sorted_eigenvalues / total_variance
+    cumulative_variance = np.cumsum(explained_variance_ratio)
+
+    # Find k for 95% and 99%
+    k_95 = np.argmax(cumulative_variance >= 0.95) + 1
+    k_99 = np.argmax(cumulative_variance >= 0.99) + 1
+    print(f"To retain 95% information: k = {k_95}")
+    print(f"To retain 99% information: k = {k_99}")
+
+    plt.figure(figsize=(10, 6))
+    plt.plot(cumulative_variance, linewidth=2, label='Cumulative Variance')
+    
+    # Plot 95% threshold for better visualization
+    plt.axvline(x=k_95, color='r', linestyle='--', label=f'95% Threshold (k={k_95})')
+    plt.axhline(y=0.95, color='r', linestyle=':', alpha=0.5)
+
+    # Plot 99% threshold for better visualization
+    plt.axvline(x=k_99, color='g', linestyle='--', label=f'99% Threshold (k={k_99})')
+    plt.axhline(y=0.99, color='g', linestyle=':', alpha=0.5)
+    
+    plt.xlabel('Number of Components (k)')
+    plt.ylabel('Cumulative Explained Variance')
+    plt.title('PCA Analysis: Information Retention vs. Dimensions')
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+    
+    return k_95

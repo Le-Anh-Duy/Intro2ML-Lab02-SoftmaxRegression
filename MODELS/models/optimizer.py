@@ -29,6 +29,8 @@ class Adam(Optimizer):
             self.v = np.zeros_like(grad)
 
         self.t += 1
+
+        grad = np.clip(grad, -10.0, 10.0)
         self.m = self.beta1 * self.m + (1 - self.beta1) * grad
         self.v = self.beta2 * self.v + (1 - self.beta2) * (grad ** 2)
 

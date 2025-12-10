@@ -43,10 +43,6 @@ class EdgeSoftmax(SoftmaxRegression):
         X_edge = np.array(edge_features)
 
         # 3. Normalize
-        epsilon = 1e-8
-        mean = np.mean(X_edge, axis=0)
-        std = np.std(X_edge, axis=0)
-        
         return np.asarray(X_edge / 255.0)
 
     def fit(self, X: np.ndarray, y: np.ndarray, X_val: np.ndarray = None, y_val: np.ndarray = None, *args, **kwargs):
